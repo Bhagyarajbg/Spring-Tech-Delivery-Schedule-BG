@@ -1,577 +1,2181 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>Delivery Schedule & Logistics Calendar</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  
-  <!-- Firebase Core & Firestore SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-  
-  <style>
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    .status-todo { border-left: 5px solid #3b82f6; background-color: #eff6ff; }
-    .status-completed { border-left: 5px solid #10b981; background-color: #ecfdf5; opacity: 0.85; }
-    .status-cancelled { border-left: 5px solid #ef4444; background-color: #fef2f2; opacity: 0.75; }
-    .status-postponed { border-left: 5px solid #f59e0b; background-color: #fffbeb; }
-    .drop-highlight { background-color: rgba(59, 130, 246, 0.15) !important; border: 2px dashed #3b82f6 !important; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Schedule &amp; Logistics Calendar</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome 6 Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Smooth Physical Sinking Animation */
+        .card-sinking-active {
+            position: relative;
+            z-index: 40 !important;
+            transition: transform 0.95s cubic-bezier(0.22, 1, 0.36, 1),
+                        box-shadow 0.95s cubic-bezier(0.22, 1, 0.36, 1),
+                        opacity 0.95s cubic-bezier(0.22, 1, 0.36, 1) !important;
+            box-shadow: 0 16px 32px -4px rgba(15, 23, 42, 0.18), 0 8px 16px -4px rgba(15, 23, 42, 0.1) !important;
+            transform: translateY(var(--sink-distance, 140px)) scale(0.97) !important;
+            pointer-events: none !important;
+        }
+
+        .card-shifting-up {
+            transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1) !important;
+            transform: translateY(var(--shift-distance, -75px)) !important;
+        }
+
+        @keyframes cardSettlePulse {
+            0% { transform: scale(0.97); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+
+        .card-settled-pulse {
+            animation: cardSettlePulse 0.4s ease-out forwards;
+        }
+
+        /* Float & Scale Popper Animations */
+        @keyframes popperSlideIn {
+            0% { opacity: 0; transform: translate(-50%, -40%) scale(0.85); }
+            60% { opacity: 1; transform: translate(-50%, -50%) scale(1.03); }
+            100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+        @keyframes popperSlideOut {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -58%) scale(0.9); }
+        }
+
+        .popper-enter {
+            animation: popperSlideIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        .popper-exit {
+            animation: popperSlideOut 0.22s ease-in forwards;
+        }
+
+        /* Drag Over Styling */
+        .drag-over-cell {
+            background-color: #eff6ff !important;
+            border-color: #3b82f6 !important;
+            outline: 2px dashed #60a5fa !important;
+        }
+    </style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans h-screen flex flex-col overflow-hidden">
+<body class="min-h-screen flex flex-col bg-slate-50 text-slate-800 antialiased selection:bg-blue-500 selection:text-white">
 
-  <!-- Header Navigation Bar -->
-  <header class="bg-slate-900 text-white px-4 py-3 flex flex-wrap items-center justify-between gap-2 shadow-md shrink-0">
-    <div class="flex items-center gap-3">
-      <h1 class="text-xl font-bold tracking-wide flex items-center gap-2">
-        <i class="fa-solid fa-truck-fast text-blue-400"></i> Delivery Schedule
-      </h1>
-      <!-- Live Sync Status Badge -->
-      <div id="sync-status" class="px-2.5 py-1 bg-green-500/20 text-green-300 border border-green-500/40 rounded-full text-xs font-semibold flex items-center gap-1.5">
-        <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-        <span id="sync-status-text">Live Sync: spt-delivery-plan</span>
-      </div>
-    </div>
-
-    <!-- Navigation & Action Controls -->
-    <div class="flex flex-wrap items-center gap-2">
-      <div class="flex items-center bg-slate-800 rounded-lg p-1 border border-slate-700">
-        <button id="btn-prev" class="px-3 py-1 text-slate-300 hover:text-white hover:bg-slate-700 rounded transition"><i class="fa-solid fa-chevron-left"></i></button>
-        <button id="btn-today" class="px-3 py-1 font-medium text-sm text-slate-200 hover:bg-slate-700 rounded transition">Today</button>
-        <button id="btn-next" class="px-3 py-1 text-slate-300 hover:text-white hover:bg-slate-700 rounded transition"><i class="fa-solid fa-chevron-right"></i></button>
-      </div>
-
-      <span id="current-date-range" class="text-sm font-semibold text-slate-300 min-w-[140px] text-center"></span>
-
-      <!-- View Selector -->
-      <select id="view-select" class="bg-slate-800 border border-slate-700 text-white text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500">
-        <option value="month">Month View</option>
-        <option value="week">Week View</option>
-        <option value="4day">4-Day View</option>
-        <option value="3day">3-Day View</option>
-        <option value="day" selected>Day View</option>
-      </select>
-
-      <div class="h-5 w-px bg-slate-700 mx-1"></div>
-
-      <!-- Management & Backup Buttons -->
-      <button id="btn-add-driver" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium rounded-lg text-slate-200 flex items-center gap-1 transition">
-        <i class="fa-solid fa-user-plus text-blue-400"></i> + Driver
-      </button>
-      <button id="btn-add-type" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium rounded-lg text-slate-200 flex items-center gap-1 transition">
-        <i class="fa-solid fa-tags text-purple-400"></i> + Type
-      </button>
-      <button id="btn-export-csv" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow flex items-center gap-1.5 transition">
-        <i class="fa-solid fa-file-excel"></i> Export CSV
-      </button>
-      <button id="btn-share" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg shadow flex items-center gap-1.5 transition">
-        <i class="fa-solid fa-share-nodes"></i> Share Link
-      </button>
-      <button id="btn-new-task" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow flex items-center gap-1.5 transition">
-        <i class="fa-solid fa-plus"></i> New Task
-      </button>
-    </div>
-  </header>
-
-  <!-- Main View Area -->
-  <main id="calendar-container" class="flex-1 overflow-x-auto overflow-y-hidden p-3 relative">
-    <div id="calendar-grid" class="h-full flex gap-3 min-w-full"></div>
-  </main>
-
-  <!-- Edit / Add Modal -->
-  <div id="task-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 flex flex-col gap-4 border border-slate-200 max-h-[90vh] overflow-y-auto">
-      <div class="flex justify-between items-center border-b pb-3">
-        <h3 id="modal-title" class="text-lg font-bold text-slate-800">Add Delivery Task</h3>
-        <button id="btn-close-modal" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <form id="task-form" class="flex flex-col gap-3">
-        <input type="hidden" id="task-id" />
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Title / Headline *</label>
-          <input type="text" id="form-title" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g., Deliver Furniture to Villa 12" />
-        </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Scheduled Date *</label>
-            <input type="date" id="form-date" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Category / Type</label>
-            <select id="form-category" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"></select>
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Assigned Driver</label>
-            <select id="form-driver" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"></select>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Status</label>
-            <select id="form-status" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"></select>
-          </div>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Public Note / Delivery Address</label>
-          <textarea id="form-message" rows="2" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Address or special customer instructions..."></textarea>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Private Specifications & Details</label>
-          <textarea id="form-details" rows="3" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-y" placeholder="Internal notes, phone numbers, specs..."></textarea>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Attachment (File Name / URL)</label>
-          <input type="text" id="form-attachment" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g., Invoice_9082.pdf" />
-        </div>
-        <div class="flex justify-end gap-2 border-t pt-3 mt-2">
-          <button type="button" id="btn-cancel-modal" class="px-4 py-2 border rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
-          <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-500 shadow">Save Delivery</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Read-Only Task Details Modal -->
-  <div id="view-details-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 flex flex-col gap-4 border border-slate-200">
-      <div class="flex justify-between items-start border-b pb-3">
-        <div>
-          <span id="view-task-category" class="text-xs font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800"></span>
-          <h3 id="view-task-title" class="text-lg font-bold text-slate-800 mt-1"></h3>
-        </div>
-        <button id="btn-close-view-modal" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <div class="space-y-2 text-sm text-slate-700">
-        <p><strong class="text-slate-900">Date:</strong> <span id="view-task-date"></span></p>
-        <p><strong class="text-slate-900">Driver:</strong> <span id="view-task-driver"></span></p>
-        <p><strong class="text-slate-900">Status:</strong> <span id="view-task-status"></span></p>
-        <div class="border-t pt-2">
-          <strong class="text-slate-900 block mb-1">Public Note:</strong>
-          <p id="view-task-message" class="text-slate-600 bg-slate-50 p-2 rounded text-xs border"></p>
-        </div>
-        <div class="border-t pt-2">
-          <strong class="text-slate-900 block mb-1">Private Details:</strong>
-          <p id="view-task-details" class="text-slate-600 bg-slate-50 p-2 rounded text-xs border whitespace-pre-wrap"></p>
-        </div>
-        <div id="view-attachment-container" class="border-t pt-2 hidden">
-          <strong class="text-slate-900 block mb-1">Attachment:</strong>
-          <a id="view-task-attachment" href="#" target="_blank" class="text-blue-600 hover:underline text-xs flex items-center gap-1"><i class="fa-solid fa-paperclip"></i> <span></span></a>
-        </div>
-      </div>
-      <div class="flex justify-end border-t pt-3">
-        <button id="btn-edit-from-view" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-500 shadow flex items-center gap-1.5"><i class="fa-solid fa-pen"></i> Edit Task</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- JavaScript Application Engine -->
-  <script>
-    // --- 1. FIREBASE INITIALIZATION ---
-    const firebaseConfig = {
-      apiKey: "AIzaSyC7Al_aEhN8EFb8HOpq--K1VesoMtKmzcc",
-      authDomain: "spt-delivery-plan.firebaseapp.com",
-      projectId: "spt-delivery-plan",
-      storageBucket: "spt-delivery-plan.firebasestorage.app",
-      messagingSenderId: "167679281314",
-      appId: "1:167679281314:web:4f7e82a030bbf177442ffb",
-      measurementId: "G-8JBXQLTWVP"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    // Default Fallback Initial Lists
-    let drivers = ["Shahzad", "Sobus", "Ahmed", "Shoaib", "Nasir", "Bilal", "Osman", "Hamad Ali", "Awais", "Outside Vehicle", "Cust. Collection", "Courier"];
-    let categories = ["Delivery", "Installation", "Collection", "Site Visit", "Maintenance"];
-    let statuses = ["To Do", "Completed", "Cancelled", "Postponed"];
-    let tasks = [];
-
-    let currentDate = new Date();
-    let currentView = "day";
-    let activeFilters = {};
-
-    // --- 2. CLOUD REAL-TIME SYNC ---
-    function initCloudSync() {
-      // Sync Tasks
-      db.collection("deliveries").onSnapshot((snapshot) => {
-        tasks = [];
-        snapshot.forEach((doc) => {
-          tasks.push({ id: doc.id, ...doc.data() });
-        });
-        renderCalendar();
-      }, (error) => {
-        console.error("Firestore sync error:", error);
-      });
-
-      // Sync Metadata (Drivers, Categories)
-      db.collection("settings").doc("meta").onSnapshot((doc) => {
-        if (doc.exists) {
-          const data = doc.data();
-          if (data.drivers) drivers = data.drivers;
-          if (data.categories) categories = data.categories;
-        } else {
-          db.collection("settings").doc("meta").set({ drivers, categories, statuses });
-        }
-        populateSelectOptions();
-        renderCalendar();
-      });
-    }
-
-    function saveMetaToCloud() {
-      db.collection("settings").doc("meta").set({ drivers, categories, statuses });
-    }
-
-    // --- 3. DOM ELEMENT REFERENCES ---
-    const calendarGrid = document.getElementById("calendar-grid");
-    const currentDateRange = document.getElementById("current-date-range");
-    const viewSelect = document.getElementById("view-select");
-    const taskModal = document.getElementById("task-modal");
-    const viewDetailsModal = document.getElementById("view-details-modal");
-    const taskForm = document.getElementById("task-form");
-
-    // --- 4. DATE HELPER FUNCTIONS ---
-    function formatDateISO(date) {
-      const y = date.getFullYear();
-      const m = String(date.getMonth() + 1).padStart(2, '0');
-      const d = String(date.getDate()).padStart(2, '0');
-      return `${y}-${m}-${d}`;
-    }
-
-    function getDaysForView() {
-      const days = [];
-      const start = new Date(currentDate);
-
-      if (currentView === "day") {
-        days.push(new Date(start));
-      } else if (currentView === "3day") {
-        for (let i = 0; i < 3; i++) {
-          const d = new Date(start);
-          d.setDate(start.getDate() + i);
-          days.push(d);
-        }
-      } else if (currentView === "4day") {
-        for (let i = 0; i < 4; i++) {
-          const d = new Date(start);
-          d.setDate(start.getDate() + i);
-          days.push(d);
-        }
-      } else if (currentView === "week") {
-        const dayOfWeek = start.getDay();
-        const diff = start.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Monday start
-        const monday = new Date(start.setDate(diff));
-        for (let i = 0; i < 7; i++) {
-          const d = new Date(monday);
-          d.setDate(monday.getDate() + i);
-          days.push(d);
-        }
-      } else if (currentView === "month") {
-        const year = start.getFullYear();
-        const month = start.getMonth();
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
-        for (let d = 1; d <= lastDay.getDate(); d++) {
-          days.push(new Date(year, month, d));
-        }
-      }
-      return days;
-    }
-
-    // --- 5. RENDER CALENDAR VIEWS ---
-    function renderCalendar() {
-      calendarGrid.innerHTML = "";
-      const days = getDaysForView();
-
-      if (days.length > 0) {
-        if (currentView === "month") {
-          currentDateRange.textContent = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-        } else {
-          currentDateRange.textContent = `${days[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${days[days.length - 1].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-        }
-      }
-
-      days.forEach((dayDate) => {
-        const dateStr = formatDateISO(dayDate);
-        const dayCol = document.createElement("div");
-        dayCol.className = `flex-1 min-w-[280px] bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col h-full overflow-hidden`;
-
-        // Column Header with Day-Specific Filters
-        const header = document.createElement("div");
-        header.className = "bg-slate-800 text-white p-2.5 border-b border-slate-700 flex flex-col gap-1.5 shrink-0";
-        header.innerHTML = `
-          <div class="flex justify-between items-center">
-            <span class="font-bold text-sm">${dayDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-            <button onclick="openAddTaskModal('${dateStr}')" class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-2 py-0.5 rounded flex items-center gap-1"><i class="fa-solid fa-plus"></i> Add</button>
-          </div>
-          <div class="grid grid-cols-2 gap-1 text-xs">
-            <select onchange="setFilter('${dateStr}', 'driver', this.value)" class="bg-slate-700 text-slate-200 rounded px-1.5 py-0.5 text-xs outline-none border border-slate-600">
-              <option value="">All Drivers</option>
-              ${drivers.map(d => `<option value="${d}" ${activeFilters[dateStr]?.driver === d ? 'selected' : ''}>${d}</option>`).join('')}
-            </select>
-            <select onchange="setFilter('${dateStr}', 'status', this.value)" class="bg-slate-700 text-slate-200 rounded px-1.5 py-0.5 text-xs outline-none border border-slate-600">
-              <option value="">All Statuses</option>
-              ${statuses.map(s => `<option value="${s}" ${activeFilters[dateStr]?.status === s ? 'selected' : ''}>${s}</option>`).join('')}
-            </select>
-          </div>
-        `;
-        dayCol.appendChild(header);
-
-        // Task Cards Droppable Body
-        const cardList = document.createElement("div");
-        cardList.className = "flex-1 overflow-y-auto p-2 space-y-2 no-scrollbar";
-        cardList.dataset.date = dateStr;
-
-        // Drag & Drop Listeners
-        cardList.addEventListener("dragover", (e) => { e.preventDefault(); cardList.classList.add("drop-highlight"); });
-        cardList.addEventListener("dragleave", () => { cardList.classList.remove("drop-highlight"); });
-        cardList.addEventListener("drop", (e) => {
-          e.preventDefault();
-          cardList.classList.remove("drop-highlight");
-          const taskId = e.dataTransfer.getData("text/plain");
-          if (taskId) {
-            db.collection("deliveries").doc(taskId).update({ date: dateStr });
-          }
-        });
-
-        // Filter Tasks for Day
-        let dayTasks = tasks.filter(t => t.date === dateStr);
-        if (activeFilters[dateStr]?.driver) {
-          dayTasks = dayTasks.filter(t => t.driver === activeFilters[dateStr].driver);
-        }
-        if (activeFilters[dateStr]?.status) {
-          dayTasks = dayTasks.filter(t => t.status === activeFilters[dateStr].status);
-        }
-
-        dayTasks.forEach(task => {
-          cardList.appendChild(renderTaskCard(task));
-        });
-
-        dayCol.appendChild(cardList);
-        calendarGrid.appendChild(dayCol);
-      });
-    }
-
-    // --- 6. RENDER TASK CARDS ---
-    function renderTaskCard(task) {
-      const card = document.createElement("div");
-      const statusClass = `status-${(task.status || 'todo').toLowerCase().replace(/\s+/g, '')}`;
-      
-      card.className = `p-3 rounded-lg shadow-sm border border-slate-200 cursor-grab ${statusClass} flex flex-col gap-1.5 transition hover:shadow-md relative`;
-      card.draggable = true;
-      card.addEventListener("dragstart", (e) => { e.dataTransfer.setData("text/plain", task.id); });
-
-      const isCompact = (currentView === "month" || currentView === "week");
-
-      if (isCompact) {
-        card.innerHTML = `
-          <div class="flex items-center justify-between gap-1" onclick="openViewDetailsModal('${task.id}')">
-            <span class="font-bold text-xs truncate text-slate-800">${task.title}</span>
-            <div class="flex items-center gap-1">
-              ${task.attachment ? '<i class="fa-solid fa-paperclip text-slate-400 text-xs"></i>' : ''}
-              <span class="w-2 h-2 rounded-full ${task.details ? 'bg-emerald-500' : 'bg-red-400'}"></span>
+    <!-- Top Global App Header -->
+    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
+            <!-- Brand & Current Period -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20">
+                    <i class="fa-solid fa-truck-fast text-lg"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-sm sm:text-base font-bold text-slate-900 tracking-tight leading-tight">
+                            Delivery Schedule &amp; Logistics
+                        </h1>
+                        <!-- Live Sync Indicator Badge -->
+                        <span id="syncBadge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live Sync
+                        </span>
+                    </div>
+                    <p id="periodDisplayTitle" class="text-xs font-semibold text-blue-600"></p>
+                </div>
             </div>
-          </div>
-        `;
-      } else {
-        card.innerHTML = `
-          <div class="flex justify-between items-start gap-1">
-            <h4 class="font-bold text-xs text-slate-900 leading-tight cursor-pointer hover:text-blue-600" onclick="openViewDetailsModal('${task.id}')">${task.title}</h4>
-            <div class="flex items-center gap-1.5">
-              ${task.attachment ? `<i class="fa-solid fa-paperclip text-slate-400 text-xs cursor-pointer" onclick="openViewDetailsModal('${task.id}')"></i>` : ''}
-              <span class="w-2 h-2 rounded-full ${task.details ? 'bg-emerald-500' : 'bg-red-400'}" title="${task.details ? 'Has Details' : 'No Details'}"></span>
-              <button onclick="openEditTaskModal('${task.id}')" class="text-slate-400 hover:text-blue-600 text-xs px-0.5"><i class="fa-solid fa-pen"></i></button>
-              <button onclick="deleteTask('${task.id}')" class="text-slate-400 hover:text-red-600 text-xs px-0.5"><i class="fa-solid fa-trash"></i></button>
+
+            <!-- View Switcher & Navigation Controls -->
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                <!-- Prev / Today / Next -->
+                <div class="inline-flex items-center rounded-xl bg-slate-100 p-0.5 border border-slate-200/80 shadow-xs">
+                    <button type="button" id="btnPrev" title="Previous period (or swipe right)" class="px-2.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white transition text-xs font-medium">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <button type="button" id="btnToday" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-white hover:text-blue-600 transition">
+                        Today
+                    </button>
+                    <button type="button" id="btnNext" title="Next period (or swipe left)" class="px-2.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white transition text-xs font-medium">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+
+                <!-- Jump To Date Selector -->
+                <div class="relative flex items-center">
+                    <input type="date" id="jumpDatePicker" title="Jump directly to selected date" class="bg-white border border-slate-200 text-slate-700 text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/40 shadow-xs font-medium cursor-pointer">
+                </div>
+
+                <!-- View Switcher Mode Buttons -->
+                <div id="viewModeGroup" class="inline-flex items-center rounded-xl bg-slate-100 p-0.5 border border-slate-200/80 shadow-xs text-xs font-semibold text-slate-600">
+                    <button type="button" data-view="MONTH" class="view-btn px-2.5 py-1.5 rounded-lg transition">Month</button>
+                    <button type="button" data-view="WEEK" class="view-btn px-2.5 py-1.5 rounded-lg transition">Week</button>
+                    <button type="button" data-view="FOUR_DAY" class="view-btn px-2.5 py-1.5 rounded-lg transition">4-Day</button>
+                    <button type="button" data-view="THREE_DAY" class="view-btn px-2.5 py-1.5 rounded-lg transition">3-Day</button>
+                    <button type="button" data-view="DAY" class="view-btn px-2.5 py-1.5 rounded-lg transition">Day</button>
+                </div>
+
+                <!-- Primary Action: New Schedule -->
+                <button type="button" id="btnOpenCreate" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold shadow-md shadow-blue-500/20 transition cursor-pointer">
+                    <i class="fa-solid fa-plus text-[11px]"></i>
+                    <span class="hidden sm:inline">New Schedule</span>
+                </button>
             </div>
-          </div>
-          ${task.message ? `<p class="text-xs text-slate-600 line-clamp-2">${task.message}</p>` : ''}
-          <div class="flex items-center justify-between border-t border-slate-200/60 pt-1.5 mt-0.5 text-xs">
-            <span class="px-2 py-0.5 bg-slate-200 text-slate-700 rounded font-medium">${task.driver || 'Unassigned'}</span>
-            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${task.status === 'Completed' ? 'bg-emerald-200 text-emerald-800' : task.status === 'Cancelled' ? 'bg-red-200 text-red-800' : 'bg-blue-200 text-blue-800'}">${task.status || 'To Do'}</span>
-          </div>
-        `;
-      }
-      return card;
-    }
+        </div>
 
-    // --- 7. MODAL ACTIONS & EVENT LISTENERS ---
-    function populateSelectOptions() {
-      const catSelect = document.getElementById("form-category");
-      const drvSelect = document.getElementById("form-driver");
-      const stsSelect = document.getElementById("form-status");
+        <!-- Filter Sub-Bar: Global Filters + Quick Add Configuration Buttons -->
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+            <div class="flex items-center gap-2 flex-wrap">
+                <!-- Driver Filter + Add Driver Button -->
+                <div class="flex items-center bg-slate-50 border border-slate-200/80 rounded-lg p-0.5">
+                    <div class="flex items-center gap-1.5 px-2 py-0.5">
+                        <i class="fa-solid fa-user-circle text-slate-400"></i>
+                        <select id="filterDriver" class="bg-transparent text-slate-700 font-medium focus:outline-none cursor-pointer">
+                            <option value="ALL">All Drivers &amp; Logistics</option>
+                        </select>
+                    </div>
+                    <button type="button" onclick="window.openAddDriverModal()" title="Add new driver / logistic partner" class="px-2 py-1 rounded bg-white hover:bg-blue-50 hover:text-blue-600 text-slate-500 border border-slate-200/60 font-semibold text-[11px] transition flex items-center gap-1 cursor-pointer">
+                        <i class="fa-solid fa-plus text-[9px]"></i> Driver
+                    </button>
+                </div>
 
-      catSelect.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('');
-      drvSelect.innerHTML = drivers.map(d => `<option value="${d}">${d}</option>`).join('');
-      stsSelect.innerHTML = statuses.map(s => `<option value="${s}">${s}</option>`).join('');
-    }
+                <!-- Category Filter + Add Category Button -->
+                <div class="flex items-center bg-slate-50 border border-slate-200/80 rounded-lg p-0.5">
+                    <div class="flex items-center gap-1.5 px-2 py-0.5">
+                        <i class="fa-solid fa-tag text-slate-400"></i>
+                        <select id="filterCategory" class="bg-transparent text-slate-700 font-medium focus:outline-none cursor-pointer">
+                            <option value="ALL">All Categories</option>
+                        </select>
+                    </div>
+                    <button type="button" onclick="window.openAddCategoryModal()" title="Add new delivery type / category" class="px-2 py-1 rounded bg-white hover:bg-indigo-50 hover:text-indigo-600 text-slate-500 border border-slate-200/60 font-semibold text-[11px] transition flex items-center gap-1 cursor-pointer">
+                        <i class="fa-solid fa-plus text-[9px]"></i> Type
+                    </button>
+                </div>
 
-    function openAddTaskModal(defaultDate = null) {
-      document.getElementById("task-id").value = "";
-      taskForm.reset();
-      if (defaultDate) document.getElementById("form-date").value = defaultDate;
-      else document.getElementById("form-date").value = formatDateISO(new Date());
-      document.getElementById("modal-title").textContent = "Add Delivery Task";
-      taskModal.classList.remove("hidden");
-    }
+                <!-- Status Filter + Add Status Button -->
+                <div class="flex items-center bg-slate-50 border border-slate-200/80 rounded-lg p-0.5">
+                    <div class="flex items-center gap-1.5 px-2 py-0.5">
+                        <i class="fa-solid fa-sliders text-slate-400"></i>
+                        <select id="filterStatus" class="bg-transparent text-slate-700 font-medium focus:outline-none cursor-pointer">
+                            <option value="ALL">All Statuses</option>
+                        </select>
+                    </div>
+                    <button type="button" onclick="window.openAddStatusModal()" title="Add new custom status" class="px-2 py-1 rounded bg-white hover:bg-emerald-50 hover:text-emerald-600 text-slate-500 border border-slate-200/60 font-semibold text-[11px] transition flex items-center gap-1 cursor-pointer">
+                        <i class="fa-solid fa-plus text-[9px]"></i> Status
+                    </button>
+                </div>
+            </div>
 
-    function openEditTaskModal(taskId) {
-      const task = tasks.find(t => t.id === taskId);
-      if (!task) return;
-      document.getElementById("task-id").value = task.id;
-      document.getElementById("form-title").value = task.title || "";
-      document.getElementById("form-date").value = task.date || "";
-      document.getElementById("form-category").value = task.category || categories[0];
-      document.getElementById("form-driver").value = task.driver || drivers[0];
-      document.getElementById("form-status").value = task.status || statuses[0];
-      document.getElementById("form-message").value = task.message || "";
-      document.getElementById("form-details").value = task.details || "";
-      document.getElementById("form-attachment").value = task.attachment || "";
+            <!-- Legend & Gesture Tip -->
+            <div class="flex items-center gap-3 text-slate-500 text-[11px]">
+                <div id="dynamicStatusLegend" class="hidden md:flex items-center gap-2">
+                    <!-- Dynamic status dots rendered here -->
+                </div>
+                <span class="text-slate-400">|</span>
+                <span class="text-slate-400"><i class="fa-solid fa-hand-point-left mr-1"></i>Swipe L/R to navigate</span>
+            </div>
+        </div>
+    </header>
 
-      document.getElementById("modal-title").textContent = "Edit Delivery Task";
-      viewDetailsModal.classList.add("hidden");
-      taskModal.classList.remove("hidden");
-    }
+    <!-- Main Interactive Calendar Viewport -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-2 sm:p-4 md:p-6 flex flex-col">
+        <div id="calendarContainer" class="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[580px]">
+            <!-- Dynamic Calendar Injected Here -->
+        </div>
+    </main>
 
-    function openViewDetailsModal(taskId) {
-      const task = tasks.find(t => t.id === taskId);
-      if (!task) return;
-      document.getElementById("view-task-title").textContent = task.title;
-      document.getElementById("view-task-category").textContent = task.category || 'Delivery';
-      document.getElementById("view-task-date").textContent = task.date;
-      document.getElementById("view-task-driver").textContent = task.driver || 'Unassigned';
-      document.getElementById("view-task-status").textContent = task.status || 'To Do';
-      document.getElementById("view-task-message").textContent = task.message || 'No public notes';
-      document.getElementById("view-task-details").textContent = task.details || 'No private details';
+    <!-- Modal: Add New Driver -->
+    <div id="addDriverModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden flex flex-col">
+            <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </div>
+                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Add Driver / Partner</h3>
+                </div>
+                <button type="button" onclick="window.closeAddDriverModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+            <form id="addDriverForm" class="p-4 space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Driver Name / Vehicle Title <span class="text-rose-500">*</span></label>
+                    <input type="text" id="newDriverInput" required placeholder="e.g. John Doe, Van 04, Express Freight" class="w-full px-3 py-2 text-xs font-semibold text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+                </div>
+                <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                    <button type="button" onclick="window.closeAddDriverModal()" class="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl shadow-md shadow-blue-500/20 transition">
+                        Add Driver
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-      const attachContainer = document.getElementById("view-attachment-container");
-      const attachLink = document.getElementById("view-task-attachment");
-      if (task.attachment) {
-        attachContainer.classList.remove("hidden");
-        attachLink.href = task.attachment.startsWith("http") ? task.attachment : "#";
-        attachLink.querySelector("span").textContent = task.attachment;
-      } else {
-        attachContainer.classList.add("hidden");
-      }
+    <!-- Modal: Add New Delivery Type -->
+    <div id="addCategoryModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden flex flex-col">
+            <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-folder-plus"></i>
+                    </div>
+                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Add Delivery Type / Category</h3>
+                </div>
+                <button type="button" onclick="window.closeAddCategoryModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+            <form id="addCategoryForm" class="p-4 space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Type Label <span class="text-rose-500">*</span></label>
+                    <input type="text" id="newCategoryLabelInput" required placeholder="e.g. Return Inspection, Repair" class="w-full px-3 py-2 text-xs font-semibold text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Select Icon</label>
+                    <select id="newCategoryIconSelect" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
+                        <option value="fa-truck">Truck (fa-truck)</option>
+                        <option value="fa-box">Package Box (fa-box)</option>
+                        <option value="fa-boxes-stacked">Stacked Boxes (fa-boxes-stacked)</option>
+                        <option value="fa-handshake">Handshake (fa-handshake)</option>
+                        <option value="fa-warehouse">Warehouse (fa-warehouse)</option>
+                        <option value="fa-screwdriver-wrench">Tools (fa-screwdriver-wrench)</option>
+                        <option value="fa-clipboard-check">Inspection (fa-clipboard-check)</option>
+                    </select>
+                </div>
+                <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                    <button type="button" onclick="window.closeAddCategoryModal()" class="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-xl shadow-md shadow-indigo-500/20 transition">
+                        Add Type
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-      document.getElementById("btn-edit-from-view").onclick = () => openEditTaskModal(task.id);
-      viewDetailsModal.classList.remove("hidden");
-    }
+    <!-- Modal: Add New Status -->
+    <div id="addStatusModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden flex flex-col">
+            <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-circle-plus"></i>
+                    </div>
+                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Add Custom Status</h3>
+                </div>
+                <button type="button" onclick="window.closeAddStatusModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+            <form id="addStatusForm" class="p-4 space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Status Label <span class="text-rose-500">*</span></label>
+                    <input type="text" id="newStatusLabelInput" required placeholder="e.g. In Transit, Out for Delivery, On Hold" class="w-full px-3 py-2 text-xs font-semibold text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/40">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Theme Color</label>
+                    <select id="newStatusColorSelect" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/40">
+                        <option value="amber">Amber / Orange</option>
+                        <option value="sky">Sky Blue</option>
+                        <option value="violet">Violet / Purple</option>
+                        <option value="cyan">Cyan / Teal</option>
+                        <option value="slate">Neutral Slate</option>
+                    </select>
+                </div>
+                <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                    <button type="button" onclick="window.closeAddStatusModal()" class="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl shadow-md shadow-emerald-500/20 transition">
+                        Add Status
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    function deleteTask(taskId) {
-      if (confirm("Are you sure you want to delete this task?")) {
-        db.collection("deliveries").doc(taskId).delete();
-      }
-    }
+    <!-- Floating Popper: Notifications -->
+    <div id="categoryPopper" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none hidden">
+        <div class="bg-slate-900/90 text-white backdrop-blur-md px-5 py-4 rounded-2xl shadow-2xl border border-slate-700/60 flex items-center gap-3 min-w-[280px]">
+            <div id="categoryPopperIcon" class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-400/30 flex items-center justify-center text-lg shrink-0">
+                <i class="fa-solid fa-truck"></i>
+            </div>
+            <div>
+                <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Category Updated</p>
+                <h4 id="categoryPopperText" class="text-sm font-bold text-white"></h4>
+                <p id="categoryPopperSub" class="text-[11px] text-slate-300 truncate max-w-[200px]"></p>
+            </div>
+        </div>
+    </div>
 
-    function setFilter(dateStr, key, value) {
-      if (!activeFilters[dateStr]) activeFilters[dateStr] = {};
-      activeFilters[dateStr][key] = value;
-      renderCalendar();
-    }
+    <div id="statusPopper" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none hidden">
+        <div class="bg-slate-900/90 text-white backdrop-blur-md px-4 py-3 rounded-2xl shadow-2xl border border-slate-700/60 flex items-center gap-3 min-w-[220px]">
+            <div id="statusPopperIcon" class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-400/30 flex items-center justify-center text-base shrink-0">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div>
+                <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Status Changed</p>
+                <h4 id="statusPopperText" class="text-xs font-bold text-white"></h4>
+            </div>
+        </div>
+    </div>
 
-    // Task Form Submit
-    taskForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const id = document.getElementById("task-id").value;
-      const data = {
-        title: document.getElementById("form-title").value,
-        date: document.getElementById("form-date").value,
-        category: document.getElementById("form-category").value,
-        driver: document.getElementById("form-driver").value,
-        status: document.getElementById("form-status").value,
-        message: document.getElementById("form-message").value,
-        details: document.getElementById("form-details").value,
-        attachment: document.getElementById("form-attachment").value,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      };
+    <div id="driverPopper" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none hidden">
+        <div class="bg-slate-900/90 text-white backdrop-blur-md px-5 py-3.5 rounded-2xl shadow-2xl border border-slate-700/60 flex items-center gap-3 min-w-[260px]">
+            <div class="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 border border-purple-400/30 flex items-center justify-center text-lg shrink-0">
+                <i class="fa-solid fa-id-card-clip"></i>
+            </div>
+            <div>
+                <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Driver Assigned</p>
+                <h4 id="driverPopperText" class="text-sm font-bold text-white"></h4>
+            </div>
+        </div>
+    </div>
 
-      if (id) {
-        db.collection("deliveries").doc(id).update(data);
-      } else {
-        db.collection("deliveries").add(data);
-      }
-      taskModal.classList.add("hidden");
-    });
+    <!-- Modal: Driver Selection & Confirmation -->
+    <div id="driverPickerModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden flex flex-col">
+            <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xs">
+                        <i class="fa-solid fa-user-circle"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Assign Driver</h3>
+                        <p id="driverPickerTaskTitle" class="text-[11px] text-slate-500 truncate max-w-[220px]"></p>
+                    </div>
+                </div>
+                <button type="button" onclick="window.closeDriverPickerModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+            <div class="p-3 max-h-72 overflow-y-auto space-y-1" id="driverRadioList"></div>
+            <div class="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
+                <button type="button" onclick="window.openAddDriverModal()" class="px-2.5 py-1 text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                    <i class="fa-solid fa-plus text-[10px]"></i> New Driver
+                </button>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="window.closeDriverPickerModal()" class="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200/70 rounded-xl transition">
+                        Cancel
+                    </button>
+                    <button type="button" id="btnConfirmDriverAssignment" class="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl shadow-md shadow-blue-500/20 transition">
+                        Confirm Driver
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    // --- 8. EXPORT TO CSV FEATURE ---
-    document.getElementById("btn-export-csv").addEventListener("click", () => {
-      if (tasks.length === 0) {
-        alert("No tasks available to export!");
-        return;
-      }
-      let csv = "\uFEFFTask ID,Scheduled Date,Title,Driver,Category,Status,Message Note,Private Details,Attachment\n";
-      tasks.forEach(t => {
-        const escapeCSV = (str) => `"${(str || '').toString().replace(/"/g, '""')}"`;
-        csv += `${escapeCSV(t.id)},${escapeCSV(t.date)},${escapeCSV(t.title)},${escapeCSV(t.driver)},${escapeCSV(t.category)},${escapeCSV(t.status)},${escapeCSV(t.message)},${escapeCSV(t.details)},${escapeCSV(t.attachment)}\n`;
-      });
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `Delivery_Schedule_Export_${formatDateISO(new Date())}.csv`;
-      link.click();
-    });
+    <!-- Modal: Category / Type Selection -->
+    <div id="categoryPickerModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden flex flex-col">
+            <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs">
+                        <i class="fa-solid fa-tags"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Select Category Type</h3>
+                        <p id="categoryPickerTaskTitle" class="text-[11px] text-slate-500 truncate max-w-[220px]"></p>
+                    </div>
+                </div>
+                <button type="button" onclick="window.closeCategoryPickerModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+            <div class="p-3 space-y-1.5 max-h-72 overflow-y-auto" id="categorySelectionContainer"></div>
+            <div class="p-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                <button type="button" onclick="window.openAddCategoryModal()" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+                    <i class="fa-solid fa-plus text-[10px]"></i> Add New Type
+                </button>
+                <button type="button" onclick="window.closeCategoryPickerModal()" class="text-xs font-medium text-slate-500 hover:text-slate-700">Close</button>
+            </div>
+        </div>
+    </div>
 
-    // Share Link Button
-    document.getElementById("btn-share").addEventListener("click", () => {
-      navigator.clipboard.writeText(window.location.href);
-      alert("Live collaboration link copied to clipboard!");
-    });
+    <!-- Modal: Status & Postpone Options -->
+    <div id="statusPickerModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
+            <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
+                        <i class="fa-solid fa-sliders"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Update Status &amp; Schedule</h3>
+                        <p id="statusPickerTaskTitle" class="text-[11px] text-slate-500 truncate max-w-[240px]"></p>
+                    </div>
+                </div>
+                <button type="button" id="btnCloseStatusModal" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+            
+            <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="space-y-1.5 flex flex-col justify-between">
+                    <div>
+                        <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Change Status</p>
+                        <div id="statusPickerOptionsContainer" class="space-y-1.5 max-h-56 overflow-y-auto"></div>
+                    </div>
+                    <button type="button" onclick="window.openAddStatusModal()" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 pt-2">
+                        <i class="fa-solid fa-plus text-[10px]"></i> Add Status
+                    </button>
+                </div>
 
-    // Global Management Buttons
-    document.getElementById("btn-add-driver").addEventListener("click", () => {
-      const name = prompt("Enter new driver name:");
-      if (name && !drivers.includes(name)) {
-        drivers.push(name);
-        saveMetaToCloud();
-      }
-    });
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-1.5 text-purple-700 font-bold text-xs mb-1">
+                            <i class="fa-regular fa-calendar-plus text-xs"></i>
+                            <span>Postpone Schedule</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mb-2">Select new scheduled date:</p>
+                        <input type="date" id="postponeDateInput" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/40 mb-2">
+                        
+                        <div class="flex items-center gap-1">
+                            <button type="button" onclick="window.quickShiftPostpone(1)" class="flex-1 py-1 rounded bg-white hover:bg-purple-50 text-[10px] font-semibold text-purple-700 border border-purple-200 transition">+1 Day</button>
+                            <button type="button" onclick="window.quickShiftPostpone(2)" class="flex-1 py-1 rounded bg-white hover:bg-purple-50 text-[10px] font-semibold text-purple-700 border border-purple-200 transition">+2 Days</button>
+                            <button type="button" onclick="window.quickShiftPostpone(7)" class="flex-1 py-1 rounded bg-white hover:bg-purple-50 text-[10px] font-semibold text-purple-700 border border-purple-200 transition">+1 Wk</button>
+                        </div>
+                    </div>
 
-    document.getElementById("btn-add-type").addEventListener("click", () => {
-      const name = prompt("Enter new category/type:");
-      if (name && !categories.includes(name)) {
-        categories.push(name);
-        saveMetaToCloud();
-      }
-    });
+                    <button type="button" onclick="window.applyPostponeDate()" class="w-full mt-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs transition shadow-sm">
+                        Confirm Postpone
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    // Navigation Controls
-    document.getElementById("btn-prev").addEventListener("click", () => {
-      if (currentView === "month") currentDate.setMonth(currentDate.getMonth() - 1);
-      else if (currentView === "week") currentDate.setDate(currentDate.getDate() - 7);
-      else if (currentView === "4day") currentDate.setDate(currentDate.getDate() - 4);
-      else if (currentView === "3day") currentDate.setDate(currentDate.getDate() - 3);
-      else currentDate.setDate(currentDate.getDate() - 1);
-      renderCalendar();
-    });
+    <!-- Modal: Quick Details -->
+    <div id="quickDetailsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
+            <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+                <div class="flex items-center gap-2">
+                    <span id="quickDetailsDot" class="w-3 h-3 rounded-full bg-rose-500 ring-2 ring-white shrink-0 shadow-xs"></span>
+                    <div>
+                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Specifications &amp; Details</h3>
+                        <p id="quickDetailsDeliveryTitle" class="text-[11px] text-slate-500 truncate max-w-[240px]"></p>
+                    </div>
+                </div>
+                <button type="button" onclick="window.closeQuickDetailsModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+            <div class="p-5 space-y-3.5">
+                <div class="flex items-center justify-between text-xs text-slate-500">
+                    <span id="quickDetailsStatusBadge" class="px-2 py-0.5 rounded-md font-semibold text-[10px]"></span>
+                    <span id="quickDetailsDate" class="font-medium text-slate-700"></span>
+                </div>
 
-    document.getElementById("btn-next").addEventListener("click", () => {
-      if (currentView === "month") currentDate.setMonth(currentDate.getMonth() + 1);
-      else if (currentView === "week") currentDate.setDate(currentDate.getDate() + 7);
-      else if (currentView === "4day") currentDate.setDate(currentDate.getDate() + 4);
-      else if (currentView === "3day") currentDate.setDate(currentDate.getDate() + 3);
-      else currentDate.setDate(currentDate.getDate() + 1);
-      renderCalendar();
-    });
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 min-h-[90px] text-xs text-slate-800 whitespace-pre-wrap leading-relaxed">
+                    <div id="quickDetailsContent"></div>
+                </div>
 
-    document.getElementById("btn-today").addEventListener("click", () => {
-      currentDate = new Date();
-      renderCalendar();
-    });
+                <div class="flex items-center justify-between pt-1 border-t border-slate-100">
+                    <button type="button" id="btnEditFromQuickDetails" class="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1.5">
+                        <i class="fa-solid fa-pen text-[11px]"></i>
+                        <span>Edit Details</span>
+                    </button>
+                    <button type="button" onclick="window.closeQuickDetailsModal()" class="px-4 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200/80 rounded-xl transition">
+                        Done
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    viewSelect.addEventListener("change", (e) => {
-      currentView = e.target.value;
-      renderCalendar();
-    });
+    <!-- Modal: Attachment Viewer -->
+    <div id="attachmentViewerModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
+            <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-paperclip"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Attachment Preview</h3>
+                        <p id="attachmentModalDeliveryTitle" class="text-[11px] text-slate-500 truncate max-w-[240px]"></p>
+                    </div>
+                </div>
+                <button type="button" onclick="window.closeAttachmentModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/70 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div id="attachmentModalFileIcon" class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-lg shrink-0 shadow-sm">
+                            <i class="fa-solid fa-file-pdf"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <h4 id="attachmentModalFileName" class="text-xs font-bold text-slate-800 truncate"></h4>
+                            <p id="attachmentModalFileSize" class="text-[11px] text-slate-500"></p>
+                        </div>
+                    </div>
+                    <span class="px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[10px] font-semibold uppercase shrink-0">Attached</span>
+                </div>
 
-    document.getElementById("btn-new-task").addEventListener("click", () => openAddTaskModal());
-    document.getElementById("btn-close-modal").addEventListener("click", () => taskModal.classList.add("hidden"));
-    document.getElementById("btn-cancel-modal").addEventListener("click", () => taskModal.classList.add("hidden"));
-    document.getElementById("btn-close-view-modal").addEventListener("click", () => viewDetailsModal.classList.add("hidden"));
+                <div class="h-44 rounded-xl border border-slate-200 bg-white p-4 flex flex-col items-center justify-center text-center shadow-inner relative overflow-hidden">
+                    <i class="fa-regular fa-file-lines text-4xl text-slate-300 mb-2"></i>
+                    <p class="text-xs font-semibold text-slate-700">Document Ready for Review</p>
+                    <p class="text-[11px] text-slate-400 max-w-xs mt-0.5">Airway bill, delivery dispatch note &amp; customer acknowledgment slip.</p>
+                </div>
 
-    // --- 9. INITIALIZE APPLICATION ---
-    populateSelectOptions();
-    initCloudSync();
-  </script>
+                <div class="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
+                    <button type="button" onclick="window.closeAttachmentModal()" class="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+                        Close
+                    </button>
+                    <button type="button" onclick="window.downloadSimulatedAttachment()" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl shadow-md shadow-blue-500/20 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-download text-xs"></i>
+                        <span>Download File</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Custom Delete Confirmation Dialog -->
+    <div id="deleteConfirmModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden p-5 text-center">
+            <div class="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center text-lg mx-auto mb-3">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="text-sm font-bold text-slate-800 mb-1">Delete Delivery Schedule?</h3>
+            <p class="text-xs text-slate-500 mb-5">This action cannot be undone. The task will be permanently removed from all calendar views.</p>
+            <div class="flex items-center justify-center gap-2">
+                <button type="button" id="btnCancelDelete" class="w-1/2 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+                    Keep Task
+                </button>
+                <button type="button" id="btnConfirmDelete" class="w-1/2 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 active:bg-rose-800 rounded-xl shadow-md shadow-rose-500/20 transition">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Read-Only Card Inspector -->
+    <div id="viewModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+                <div class="flex items-center gap-2">
+                    <span id="viewDetailDot" class="w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white shrink-0"></span>
+                    <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Schedule Details</h3>
+                </div>
+                <button type="button" onclick="window.closeViewModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+            <div class="p-5 space-y-3.5">
+                <div>
+                    <h4 id="viewTitle" class="text-base font-bold text-slate-800 leading-snug"></h4>
+                    <p id="viewMessage" class="text-xs text-slate-500 mt-1"></p>
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-xs pt-2 border-t border-slate-100">
+                    <div>
+                        <span class="text-[10px] uppercase font-bold text-slate-400">Date</span>
+                        <p id="viewDate" class="font-semibold text-slate-700 mt-0.5"></p>
+                    </div>
+                    <div>
+                        <span class="text-[10px] uppercase font-bold text-slate-400">Driver</span>
+                        <p id="viewDriver" class="font-semibold text-slate-700 mt-0.5"></p>
+                    </div>
+                    <div>
+                        <span class="text-[10px] uppercase font-bold text-slate-400">Type</span>
+                        <div id="viewTypeContainer" class="mt-0.5"></div>
+                    </div>
+                    <div>
+                        <span class="text-[10px] uppercase font-bold text-slate-400">Status</span>
+                        <div id="viewStatusContainer" class="mt-0.5"></div>
+                    </div>
+                </div>
+
+                <div class="pt-2 border-t border-slate-100">
+                    <span class="text-[10px] uppercase font-bold text-slate-400">Specifications &amp; Notes</span>
+                    <div id="viewDetails" class="mt-1 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 whitespace-pre-wrap min-h-[50px]"></div>
+                </div>
+
+                <div id="viewAttachmentSection" class="pt-2 border-t border-slate-100 hidden">
+                    <span class="text-[10px] uppercase font-bold text-slate-400">Attachment</span>
+                    <div class="mt-1 p-2.5 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <i class="fa-solid fa-paperclip text-slate-400"></i>
+                            <span id="viewAttachmentName" class="text-xs font-semibold text-slate-700 truncate"></span>
+                        </div>
+                        <button type="button" onclick="window.downloadSimulatedAttachment()" class="text-xs font-semibold text-blue-600 hover:text-blue-700">Download</button>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+                    <button type="button" id="btnDeleteFromView" class="text-xs font-semibold text-rose-600 hover:text-rose-700 flex items-center gap-1.5">
+                        <i class="fa-regular fa-trash-can text-xs"></i>
+                        <span>Delete</span>
+                    </button>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="window.closeViewModal()" class="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+                            Close
+                        </button>
+                        <button type="button" id="btnEditFromView" class="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition">
+                            Edit Schedule
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Edit Delivery Schedule Form -->
+    <div id="editModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-pen"></i>
+                    </div>
+                    <h3 class="text-sm font-bold text-slate-800">Edit Delivery Schedule</h3>
+                </div>
+                <button type="button" onclick="window.closeEditModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+            <form id="editDeliveryForm" class="p-5 space-y-3.5 overflow-y-auto max-h-[80vh]">
+                <input type="hidden" id="editDeliveryId">
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Task Name / Title <span class="text-rose-500">*</span></label>
+                    <input type="text" id="editTitle" required class="w-full px-3 py-2 text-xs font-semibold text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Scheduled Date <span class="text-rose-500">*</span></label>
+                        <input type="date" id="editDate" required class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Driver / Logistics <span class="text-rose-500">*</span></label>
+                        <select id="editDriver" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40"></select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Category Type</label>
+                        <select id="editType" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Status</label>
+                        <select id="editStatus" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40"></select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Message Note <span class="text-[10px] text-slate-400 font-normal">(Visible under title)</span></label>
+                    <input type="text" id="editMessage" placeholder="e.g. Call client 30 mins before arrival" class="w-full px-3 py-2 text-xs text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Details &amp; Specifications <span class="text-[10px] text-slate-400 font-normal">(Drag corner to expand)</span></label>
+                    <textarea id="editDetails" rows="3" placeholder="Enter private site instructions, security gate pass codes, recipient info..." class="w-full px-3 py-2 text-xs text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-y min-h-[75px]"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Attachment</label>
+                    <div class="flex items-center gap-2">
+                        <label class="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold cursor-pointer transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-paperclip text-xs"></i>
+                            <span>Attach File</span>
+                            <input type="file" id="editFileInput" class="hidden">
+                        </label>
+                        <div id="editAttachmentPreview" class="flex-1 truncate text-xs text-slate-500"></div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+                    <button type="button" id="btnDeleteFromEdit" class="text-xs font-semibold text-rose-600 hover:text-rose-700 flex items-center gap-1.5">
+                        <i class="fa-regular fa-trash-can text-xs"></i>
+                        <span>Delete</span>
+                    </button>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="window.closeEditModal()" class="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl shadow-md shadow-blue-500/20 transition">
+                            Save Changes
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Create Delivery Schedule -->
+    <div id="createModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-calendar-plus"></i>
+                    </div>
+                    <h3 class="text-sm font-bold text-slate-800">Schedule Delivery Task</h3>
+                </div>
+                <button type="button" onclick="window.closeCreateModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+            <form id="createDeliveryForm" class="p-5 space-y-3.5 overflow-y-auto max-h-[80vh]">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Task Name / Title <span class="text-rose-500">*</span></label>
+                    <input type="text" id="createTitle" required placeholder="e.g. Deliver 12x Solar Panels to Warehouse B" class="w-full px-3 py-2 text-xs font-semibold text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Scheduled Date <span class="text-rose-500">*</span></label>
+                        <input type="date" id="createDate" required class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Driver / Logistics <span class="text-rose-500">*</span></label>
+                        <select id="createDriver" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40"></select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Category Type</label>
+                        <select id="createType" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Status</label>
+                        <select id="createStatus" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40"></select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Message Note <span class="text-[10px] text-slate-400 font-normal">(Visible on card)</span></label>
+                    <input type="text" id="createMessage" placeholder="e.g. Call client upon dispatch" class="w-full px-3 py-2 text-xs text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Details &amp; Specifications <span class="text-[10px] text-slate-400 font-normal">(Drag corner to expand)</span></label>
+                    <textarea id="createDetails" rows="3" placeholder="Enter private site instructions, security gate pass codes, recipient info..." class="w-full px-3 py-2 text-xs text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-y min-h-[75px]"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Attachment</label>
+                    <div class="flex items-center gap-2">
+                        <label class="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold cursor-pointer transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-paperclip text-xs"></i>
+                            <span>Attach File</span>
+                            <input type="file" id="createFileInput" class="hidden">
+                        </label>
+                        <div id="createAttachmentPreview" class="flex-1 truncate text-xs text-slate-500"></div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="window.closeCreateModal()" class="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl shadow-md shadow-blue-500/20 transition">
+                        Schedule Delivery
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. FIREBASE INITIALIZATION ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyC7Al_aEhN8EFb8HOpq--K1VesoMtKmzcc",
+            authDomain: "spt-delivery-plan.firebaseapp.com",
+            projectId: "spt-delivery-plan",
+            storageBucket: "spt-delivery-plan.firebasestorage.app",
+            messagingSenderId: "167679281314",
+            appId: "1:167679281314:web:4f7e82a030bbf177442ffb",
+            measurementId: "G-8JBXQLTWVP"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+
+        // Mutable Drivers List
+        let DRIVERS_LIST = [
+            'Shahzad', 'Sobus', 'Ahmed', 'Shoaib', 'Nasir', 'Bilal',
+            'Osman', 'Hamad Ali', 'Awais', 'Outside Vehicle', 'Cust. Collection', 'Courier'
+        ];
+
+        // Mutable Category Types Configuration
+        let categoryMap = {
+            DELIVERY: { label: 'Delivery', icon: 'fa-truck', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+            COLLECTION_US: { label: 'Collection by us', icon: 'fa-box', bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
+            COLLECTION_CUSTOMER: { label: 'Collection by customer', icon: 'fa-hand-holding-box', bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200' },
+            SUBMISSION: { label: 'Submission', icon: 'fa-file-export', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+            INSTALLATION: { label: 'Installation', icon: 'fa-wrench', bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' }
+        };
+
+        // Mutable Statuses Configuration
+        let statusMap = {
+            TO_DO: { label: 'To Do', dot: 'bg-blue-500', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', sortRank: 1 },
+            COMPLETED: { label: 'Completed', dot: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', sortRank: 2 },
+            CANCELLED: { label: 'Cancelled', dot: 'bg-rose-500', bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', sortRank: 3 }
+        };
+
+        const fullMonthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const shortDayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+        function toISODate(d) {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function formatFullDate(d) {
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = fullMonthNames[d.getMonth()];
+            const year = d.getFullYear();
+            return `${day} ${month} ${year}`;
+        }
+
+        function formatDisplayDate(d) {
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = monthNames[d.getMonth()];
+            const year = d.getFullYear();
+            return `${day} ${month} ${year}`;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // Global State
+        const today = new Date();
+        const state = {
+            currentDate: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
+            viewMode: 'WEEK',
+            selectedDriver: 'ALL',
+            selectedCategory: 'ALL',
+            selectedStatus: 'ALL',
+            dayFilters: {},
+            activeViewingId: null,
+            activeActionId: null,
+            selectedDriverRadio: null,
+            itemPendingDelete: null,
+            createAttachment: null,
+            editAttachment: null,
+            deliveries: []
+        };
+
+        // Realtime Firebase Firestore Sync
+        function initCloudSync() {
+            db.collection("deliveries").onSnapshot((snapshot) => {
+                state.deliveries = [];
+                snapshot.forEach((doc) => {
+                    state.deliveries.push({ id: doc.id, ...doc.data() });
+                });
+                renderCalendar();
+            });
+
+            db.collection("settings").doc("meta").onSnapshot((doc) => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    if (data.drivers) DRIVERS_LIST = data.drivers;
+                    if (data.categories) categoryMap = data.categories;
+                    if (data.statuses) statusMap = data.statuses;
+                } else {
+                    db.collection("settings").doc("meta").set({
+                        drivers: DRIVERS_LIST,
+                        categories: categoryMap,
+                        statuses: statusMap
+                    });
+                }
+                refreshDropdownOptions();
+                renderCalendar();
+            });
+        }
+
+        function saveMetaToCloud() {
+            db.collection("settings").doc("meta").set({
+                drivers: DRIVERS_LIST,
+                categories: categoryMap,
+                statuses: statusMap
+            });
+        }
+
+        function sortDayDeliveries(list) {
+            return list.slice().sort((a, b) => {
+                const getRank = (status) => {
+                    if (statusMap[status] && typeof statusMap[status].sortRank === 'number') {
+                        return statusMap[status].sortRank;
+                    }
+                    if (status === 'COMPLETED') return 2;
+                    if (status === 'CANCELLED') return 3;
+                    return 1;
+                };
+                const rankA = getRank(a.status);
+                const rankB = getRank(b.status);
+                if (rankA !== rankB) return rankA - rankB;
+                return (a.title || '').localeCompare(b.title || '');
+            });
+        }
+
+        function renderDetailedCard(item) {
+            const hasDetails = Boolean(item.details && item.details.trim().length > 0);
+            const isCancelled = item.status === 'CANCELLED';
+
+            const titleClasses = isCancelled ? 'font-medium text-slate-400 line-through' : 'font-semibold text-slate-800';
+
+            const cat = categoryMap[item.type] || { label: item.type, icon: 'fa-tag', bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-200' };
+            const stat = statusMap[item.status] || { label: item.status, dot: 'bg-slate-400', bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-200' };
+
+            const messageHtml = (item.message && item.message.trim().length > 0)
+                ? `<div class="text-[11px] text-slate-500 leading-snug break-words mt-0.5 ${isCancelled ? 'line-through text-slate-400' : ''}">${escapeHtml(item.message)}</div>`
+                : '';
+
+            const attachmentIcon = item.attachment
+                ? `<button type="button" title="Attachment: ${escapeHtml(item.attachment.name)} (Click to view)" onclick="window.showAttachmentModal('${item.id}', event)" class="w-6 h-6 rounded-md hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-blue-600 shrink-0 text-xs transition cursor-pointer"><i class="fa-solid fa-paperclip"></i></button>`
+                : '';
+
+            const dotIndicator = `
+                <button type="button" title="${hasDetails ? 'Click to view private details' : 'No details recorded (Click to add)'}" onclick="window.showQuickDetailsModal('${item.id}', event)" class="p-1 rounded-full hover:ring-2 hover:ring-slate-300 flex items-center justify-center cursor-pointer transition shrink-0">
+                    <span class="w-2.5 h-2.5 rounded-full ${hasDetails ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'} ring-2 ring-white shrink-0 shadow-xs"></span>
+                </button>
+            `;
+
+            return `
+                <div id="card-${item.id}" draggable="true" data-id="${item.id}" onclick="window.openViewModal('${item.id}')" class="group relative bg-white border border-slate-200/90 hover:border-blue-400/80 rounded-xl p-2.5 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col gap-2 select-none">
+                    <div class="w-full">
+                        <h4 class="text-xs leading-snug break-words ${titleClasses}">${escapeHtml(item.title)}</h4>
+                        ${messageHtml}
+                    </div>
+
+                    <div class="flex items-center justify-between gap-1.5 text-slate-600 text-[11px]" onclick="event.stopPropagation()">
+                        <button type="button" title="Click to assign driver" onclick="window.openDriverPickerModal('${item.id}', event)" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 font-medium transition max-w-[140px] truncate border border-slate-200/80 cursor-pointer">
+                            <i class="fa-solid fa-user-circle text-slate-400 text-xs shrink-0"></i>
+                            <span class="truncate">${escapeHtml(item.driver || 'Select Driver')}</span>
+                            <i class="fa-solid fa-chevron-down text-[8px] opacity-60 ml-0.5 shrink-0"></i>
+                        </button>
+
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button type="button" title="Delete schedule" onclick="window.showDeleteConfirmDialog('${item.id}', event)" class="w-6 h-6 rounded-md hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center transition">
+                                <i class="fa-regular fa-trash-can text-[11px]"></i>
+                            </button>
+                            <button type="button" title="Edit schedule directly" onclick="window.openEditModal('${item.id}', event)" class="w-6 h-6 rounded-md hover:bg-blue-50 text-slate-400 hover:text-blue-600 flex items-center justify-center transition">
+                                <i class="fa-solid fa-pen text-[10px]"></i>
+                            </button>
+                            ${attachmentIcon}
+                            ${dotIndicator}
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-1.5 pt-1 border-t border-slate-100" onclick="event.stopPropagation()">
+                        <button type="button" title="Click to change category type" onclick="window.openCategoryPicker('${item.id}', event)" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold border ${cat.bg} ${cat.text} ${cat.border} hover:opacity-85 transition truncate cursor-pointer max-w-[125px]">
+                            <i class="fa-solid ${cat.icon} text-[9px] shrink-0"></i>
+                            <span class="truncate">${cat.label}</span>
+                        </button>
+
+                        <button type="button" title="Click to update status or postpone" onclick="window.openStatusModal('${item.id}', event)" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold border ${stat.bg} ${stat.text} ${stat.border} hover:opacity-85 transition cursor-pointer shrink-0">
+                            <span class="w-1.5 h-1.5 rounded-full ${stat.dot}"></span>
+                            <span>${stat.label}</span>
+                            <i class="fa-solid fa-chevron-down text-[8px] opacity-60 ml-0.5"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCompactNameCard(item) {
+            const hasDetails = Boolean(item.details && item.details.trim().length > 0);
+            const isCancelled = item.status === 'CANCELLED';
+            const isCompleted = item.status === 'COMPLETED';
+
+            let borderAndBg = 'border-l-[3px] border-l-blue-500 bg-white hover:bg-blue-50/40 border-slate-200/90 text-slate-800';
+            if (isCompleted) {
+                borderAndBg = 'border-l-[3px] border-l-emerald-500 bg-emerald-50/20 hover:bg-emerald-50/50 border-emerald-200/70 text-slate-800';
+            } else if (isCancelled) {
+                borderAndBg = 'border-l-[3px] border-l-rose-400 bg-slate-50/80 hover:bg-rose-50/30 border-slate-200 text-slate-400';
+            }
+
+            const titleClasses = isCancelled ? 'line-through text-slate-400 font-medium' : 'font-medium text-slate-800';
+
+            const attachmentIcon = item.attachment
+                ? `<button type="button" title="Attachment: ${escapeHtml(item.attachment.name)} (Click to view)" onclick="window.showAttachmentModal('${item.id}', event)" class="w-4 h-4 rounded hover:bg-slate-200/60 flex items-center justify-center text-slate-500 hover:text-blue-600 shrink-0 text-[10px] transition cursor-pointer"><i class="fa-solid fa-paperclip"></i></button>`
+                : '';
+
+            const dotIndicator = `
+                <button type="button" title="${hasDetails ? 'Click to view private details' : 'No details (Click to add)'}" onclick="window.showQuickDetailsModal('${item.id}', event)" class="p-0.5 rounded-full hover:ring-2 hover:ring-slate-300 flex items-center justify-center cursor-pointer transition">
+                    <span class="w-2 h-2 rounded-full ${hasDetails ? 'bg-rose-500 ring-2 ring-white shadow-xs' : 'bg-emerald-500 ring-2 ring-white shadow-xs'}"></span>
+                </button>
+            `;
+
+            return `
+                <div id="card-${item.id}" draggable="true" data-id="${item.id}" onclick="window.openViewModal('${item.id}')" class="group relative border rounded-lg px-2 py-1.5 shadow-xs hover:shadow transition-all cursor-pointer flex items-center justify-between gap-1 select-none ${borderAndBg}">
+                    <span class="text-xs leading-snug break-words line-clamp-2 flex-1 ${titleClasses}">${escapeHtml(item.title)}</span>
+                    <div class="flex items-center gap-1 shrink-0 ml-1" onclick="event.stopPropagation()">
+                        <button type="button" title="Delete task" onclick="window.showDeleteConfirmDialog('${item.id}', event)" class="opacity-0 group-hover:opacity-100 hover:text-rose-600 text-slate-400 transition text-[11px] p-0.5">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </button>
+                        ${attachmentIcon}
+                        ${dotIndicator}
+                    </div>
+                </div>
+            `;
+        }
+
+        function refreshDropdownOptions() {
+            const filterDriver = document.getElementById('filterDriver');
+            const createDriver = document.getElementById('createDriver');
+            const editDriver = document.getElementById('editDriver');
+
+            const currentFilterDriver = filterDriver.value;
+            filterDriver.innerHTML = '<option value="ALL">All Drivers &amp; Logistics</option>';
+            createDriver.innerHTML = '';
+            editDriver.innerHTML = '';
+
+            DRIVERS_LIST.forEach(d => {
+                filterDriver.appendChild(new Option(d, d, false, d === currentFilterDriver));
+                createDriver.appendChild(new Option(d, d));
+                editDriver.appendChild(new Option(d, d));
+            });
+
+            const filterCategory = document.getElementById('filterCategory');
+            const createType = document.getElementById('createType');
+            const editType = document.getElementById('editType');
+
+            const currentFilterCat = filterCategory.value;
+            filterCategory.innerHTML = '<option value="ALL">All Categories</option>';
+            createType.innerHTML = '';
+            editType.innerHTML = '';
+
+            Object.keys(categoryMap).forEach(key => {
+                const label = categoryMap[key].label;
+                filterCategory.appendChild(new Option(label, key, false, key === currentFilterCat));
+                createType.appendChild(new Option(label, key));
+                editType.appendChild(new Option(label, key));
+            });
+
+            const filterStatus = document.getElementById('filterStatus');
+            const createStatus = document.getElementById('createStatus');
+            const editStatus = document.getElementById('editStatus');
+
+            const currentFilterStat = filterStatus.value;
+            filterStatus.innerHTML = '<option value="ALL">All Statuses</option>';
+            createStatus.innerHTML = '';
+            editStatus.innerHTML = '';
+
+            Object.keys(statusMap).forEach(key => {
+                const label = statusMap[key].label;
+                filterStatus.appendChild(new Option(label, key, false, key === currentFilterStat));
+                createStatus.appendChild(new Option(label, key));
+                editStatus.appendChild(new Option(label, key));
+            });
+
+            const legendEl = document.getElementById('dynamicStatusLegend');
+            if (legendEl) {
+                legendEl.innerHTML = Object.keys(statusMap).map(key => {
+                    const s = statusMap[key];
+                    return `<span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full ${s.dot}"></span> ${escapeHtml(s.label)}</span>`;
+                }).join('') + `<span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500 ring-2 ring-rose-200"></span> Details</span>`;
+            }
+        }
+
+        window.openAddDriverModal = function() {
+            document.getElementById('newDriverInput').value = '';
+            document.getElementById('addDriverModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('newDriverInput')?.focus(), 60);
+        };
+        window.closeAddDriverModal = function() {
+            document.getElementById('addDriverModal').classList.add('hidden');
+        };
+
+        window.openAddCategoryModal = function() {
+            document.getElementById('newCategoryLabelInput').value = '';
+            document.getElementById('addCategoryModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('newCategoryLabelInput')?.focus(), 60);
+        };
+        window.closeAddCategoryModal = function() {
+            document.getElementById('addCategoryModal').classList.add('hidden');
+        };
+
+        window.openAddStatusModal = function() {
+            document.getElementById('newStatusLabelInput').value = '';
+            document.getElementById('addStatusModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('newStatusLabelInput')?.focus(), 60);
+        };
+        window.closeAddStatusModal = function() {
+            document.getElementById('addStatusModal').classList.add('hidden');
+        };
+
+        function getFilteredDeliveries() {
+            return state.deliveries.filter(item => {
+                if (state.selectedDriver !== 'ALL' && item.driver !== state.selectedDriver) return false;
+                if (state.selectedCategory !== 'ALL' && item.type !== state.selectedCategory) return false;
+                if (state.selectedStatus !== 'ALL' && item.status !== state.selectedStatus) return false;
+                return true;
+            });
+        }
+
+        window.setDayFilter = function(isoDate, filterKey, val) {
+            if (!state.dayFilters[isoDate]) {
+                state.dayFilters[isoDate] = { driver: 'ALL', type: 'ALL', status: 'ALL' };
+            }
+            state.dayFilters[isoDate][filterKey] = val;
+            renderCalendar();
+        };
+
+        function renderCalendar() {
+            const container = document.getElementById('calendarContainer');
+            const titleDisplay = document.getElementById('periodDisplayTitle');
+            const datePicker = document.getElementById('jumpDatePicker');
+            const filtered = getFilteredDeliveries();
+
+            if (datePicker) {
+                datePicker.value = toISODate(state.currentDate);
+            }
+
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                const mode = btn.getAttribute('data-view');
+                if (mode === state.viewMode) {
+                    btn.className = 'view-btn px-2.5 py-1.5 rounded-lg transition bg-white text-blue-600 shadow-xs font-bold';
+                } else {
+                    btn.className = 'view-btn px-2.5 py-1.5 rounded-lg transition text-slate-600 hover:text-slate-900 font-semibold';
+                }
+            });
+
+            if (state.viewMode === 'MONTH') {
+                renderMonthView(container, titleDisplay, filtered);
+            } else if (state.viewMode === 'WEEK') {
+                renderMultiDayView(container, titleDisplay, filtered, 7, true);
+            } else if (state.viewMode === 'FOUR_DAY') {
+                renderMultiDayView(container, titleDisplay, filtered, 4, false);
+            } else if (state.viewMode === 'THREE_DAY') {
+                renderMultiDayView(container, titleDisplay, filtered, 3, false);
+            } else if (state.viewMode === 'DAY') {
+                renderMultiDayView(container, titleDisplay, filtered, 1, false);
+            }
+
+            attachDragAndDropHandlers();
+        }
+
+        function renderMonthView(container, titleDisplay, items) {
+            const year = state.currentDate.getFullYear();
+            const month = state.currentDate.getMonth();
+            const firstDayOfMonth = new Date(year, month, 1);
+            const lastDayOfMonth = new Date(year, month + 1, 0);
+
+            titleDisplay.textContent = `${monthNames[month]} ${year}`;
+
+            const startDayIndex = firstDayOfMonth.getDay();
+            const totalDays = lastDayOfMonth.getDate();
+
+            let html = `
+                <div class="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center py-2">
+                    <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                </div>
+                <div class="flex-1 grid grid-cols-7 auto-rows-fr divide-x divide-y divide-slate-100 min-h-[500px]">
+            `;
+
+            for (let i = 0; i < startDayIndex; i++) {
+                html += `<div class="bg-slate-50/50 p-1.5 min-h-[90px] opacity-40"></div>`;
+            }
+
+            for (let day = 1; day <= totalDays; day++) {
+                const currentCellDate = new Date(year, month, day);
+                const isoDate = toISODate(currentCellDate);
+                const isToday = toISODate(today) === isoDate;
+                const dayTasks = sortDayDeliveries(items.filter(d => d.date === isoDate));
+
+                html += `
+                    <div class="calendar-day-cell p-1.5 min-h-[105px] flex flex-col gap-1 transition-colors hover:bg-slate-50/70" data-date="${isoDate}">
+                        <div class="flex items-center justify-between text-xs mb-0.5">
+                            <span class="w-6 h-6 flex items-center justify-center rounded-full text-xs font-semibold ${isToday ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-700'}">
+                                ${day}
+                            </span>
+                            <button type="button" title="Add schedule for this date" onclick="window.openCreateModalForDate('${isoDate}')" class="w-5 h-5 rounded-md hover:bg-slate-200 text-slate-400 hover:text-slate-700 flex items-center justify-center text-xs">
+                                <i class="fa-solid fa-plus text-[10px]"></i>
+                            </button>
+                        </div>
+                        <div class="flex-1 flex flex-col gap-1 overflow-y-auto max-h-[120px]">
+                            ${dayTasks.map(item => renderCompactNameCard(item)).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            const totalCells = startDayIndex + totalDays;
+            const remainingCells = (7 - (totalCells % 7)) % 7;
+            for (let i = 0; i < remainingCells; i++) {
+                html += `<div class="bg-slate-50/50 p-1.5 min-h-[90px] opacity-40"></div>`;
+            }
+
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        function renderMultiDayView(container, titleDisplay, items, numDays, useCompactCards) {
+            const start = new Date(state.currentDate);
+            if (numDays === 7) {
+                start.setDate(start.getDate() - start.getDay());
+            }
+
+            const daysArray = [];
+            for (let i = 0; i < numDays; i++) {
+                const d = new Date(start);
+                d.setDate(d.getDate() + i);
+                daysArray.push(d);
+            }
+
+            const firstDateStr = formatFullDate(daysArray[0]);
+            titleDisplay.textContent = numDays === 1 ? firstDateStr : `${formatDisplayDate(daysArray[0])} – ${formatDisplayDate(daysArray[daysArray.length - 1])}`;
+
+            const gridColsClass = {
+                7: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7',
+                4: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4',
+                3: 'grid-cols-1 sm:grid-cols-3',
+                1: 'grid-cols-1'
+            }[numDays] || 'grid-cols-1';
+
+            let html = `<div class="flex-1 grid ${gridColsClass} divide-x divide-y md:divide-y-0 divide-slate-100 min-h-[500px]">`;
+
+            daysArray.forEach(d => {
+                const isoDate = toISODate(d);
+                const isToday = toISODate(today) === isoDate;
+                const dFilters = state.dayFilters[isoDate] || { driver: 'ALL', type: 'ALL', status: 'ALL' };
+
+                let dayTasks = items.filter(item => item.date === isoDate);
+                if (dFilters.driver !== 'ALL') {
+                    dayTasks = dayTasks.filter(item => item.driver === dFilters.driver);
+                }
+                if (dFilters.type !== 'ALL') {
+                    dayTasks = dayTasks.filter(item => item.type === dFilters.type);
+                }
+                if (dFilters.status !== 'ALL') {
+                    dayTasks = dayTasks.filter(item => item.status === dFilters.status);
+                }
+
+                dayTasks = sortDayDeliveries(dayTasks);
+
+                html += `
+                    <div class="calendar-day-cell flex flex-col p-2.5 bg-white min-h-[460px] gap-2 transition-colors" data-date="${isoDate}">
+                        <div class="pb-2 border-b border-slate-200/90 flex flex-col gap-1.5">
+                            <div class="flex items-center justify-between gap-1">
+                                <div class="min-w-0">
+                                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block leading-tight">
+                                        ${shortDayNames[d.getDay()]}
+                                    </span>
+                                    <span class="text-xs font-bold leading-tight truncate block ${isToday ? 'text-blue-600' : 'text-slate-800'}" title="${formatFullDate(d)}">
+                                        ${formatFullDate(d)}
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-1 shrink-0">
+                                    <span class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">
+                                        ${dayTasks.length}
+                                    </span>
+                                    <button type="button" title="Add schedule for this date" onclick="window.openCreateModalForDate('${isoDate}')" class="w-6 h-6 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-blue-600 flex items-center justify-center transition">
+                                        <i class="fa-solid fa-plus text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-1 pt-0.5">
+                                <select onchange="window.setDayFilter('${isoDate}', 'driver', this.value)" title="Filter this day by Driver" class="w-full text-[10px] font-medium bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-md px-1 py-0.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer truncate">
+                                    <option value="ALL">Driver: All</option>
+                                    ${DRIVERS_LIST.map(dr => `<option value="${escapeHtml(dr)}" ${dFilters.driver === dr ? 'selected' : ''}>${escapeHtml(dr)}</option>`).join('')}
+                                </select>
+
+                                <select onchange="window.setDayFilter('${isoDate}', 'type', this.value)" title="Filter this day by Type" class="w-full text-[10px] font-medium bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-md px-1 py-0.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer truncate">
+                                    <option value="ALL">Type: All</option>
+                                    ${Object.keys(categoryMap).map(k => `<option value="${k}" ${dFilters.type === k ? 'selected' : ''}>${escapeHtml(categoryMap[k].label)}</option>`).join('')}
+                                </select>
+
+                                <select onchange="window.setDayFilter('${isoDate}', 'status', this.value)" title="Filter this day by Status" class="w-full text-[10px] font-medium bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-md px-1 py-0.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer truncate">
+                                    <option value="ALL">Status: All</option>
+                                    ${Object.keys(statusMap).map(s => `<option value="${s}" ${dFilters.status === s ? 'selected' : ''}>${escapeHtml(statusMap[s].label)}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="day-tasks-container flex-1 flex flex-col gap-2 overflow-y-auto pr-0.5">
+                            ${dayTasks.length === 0 ? `
+                                <div class="h-28 flex flex-col items-center justify-center text-center text-slate-300 text-xs border border-dashed border-slate-200 rounded-xl my-auto">
+                                    <i class="fa-regular fa-calendar-xmark text-lg mb-1 opacity-60"></i>
+                                    <span>No deliveries</span>
+                                </div>
+                            ` : dayTasks.map(item => useCompactCards ? renderCompactNameCard(item) : renderDetailedCard(item)).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        window.performSmoothSinkingAnimation = function(deliveryId, newStatus) {
+            const cardEl = document.getElementById(`card-${deliveryId}`);
+            const delivery = state.deliveries.find(d => d.id === deliveryId);
+            if (!delivery) return;
+
+            db.collection("deliveries").doc(deliveryId).update({ status: newStatus });
+
+            if (!cardEl) {
+                renderCalendar();
+                return;
+            }
+
+            const container = cardEl.closest('.day-tasks-container') || cardEl.closest('.calendar-day-cell');
+            if (!container) {
+                renderCalendar();
+                return;
+            }
+
+            const siblingCards = Array.from(container.querySelectorAll('[id^="card-"]'));
+            const currentIndex = siblingCards.indexOf(cardEl);
+            const totalCards = siblingCards.length;
+
+            if (currentIndex === -1 || totalCards <= 1 || currentIndex === totalCards - 1) {
+                renderCalendar();
+                return;
+            }
+
+            const cardRect = cardEl.getBoundingClientRect();
+            const lastCard = siblingCards[totalCards - 1];
+            const lastRect = lastCard.getBoundingClientRect();
+            const sinkDistance = lastRect.top - cardRect.top;
+
+            cardEl.style.setProperty('--sink-distance', `${sinkDistance}px`);
+            cardEl.classList.add('card-sinking-active');
+
+            const cardHeightWithGap = cardRect.height + 8;
+            for (let i = currentIndex + 1; i < totalCards; i++) {
+                const sib = siblingCards[i];
+                sib.style.setProperty('--shift-distance', `-${cardHeightWithGap}px`);
+                sib.classList.add('card-shifting-up');
+            }
+
+            setTimeout(() => {
+                renderCalendar();
+                const refreshedCard = document.getElementById(`card-${deliveryId}`);
+                if (refreshedCard) {
+                    refreshedCard.classList.add('card-settled-pulse');
+                    setTimeout(() => refreshedCard.classList.remove('card-settled-pulse'), 450);
+                }
+            }, 900);
+        };
+
+        window.showStatusPopper = function(statusText, statusKey) {
+            const popper = document.getElementById('statusPopper');
+            const textEl = document.getElementById('statusPopperText');
+            const iconEl = document.getElementById('statusPopperIcon');
+            if (!popper || !textEl || !iconEl) return;
+
+            textEl.textContent = statusText;
+
+            if (statusKey === 'COMPLETED') {
+                iconEl.className = 'w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-400/30 flex items-center justify-center text-base shrink-0';
+                iconEl.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+            } else if (statusKey === 'CANCELLED') {
+                iconEl.className = 'w-9 h-9 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-400/30 flex items-center justify-center text-base shrink-0';
+                iconEl.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
+            } else if (statusKey === 'POSTPONED') {
+                iconEl.className = 'w-9 h-9 rounded-xl bg-purple-500/20 text-purple-400 border border-purple-400/30 flex items-center justify-center text-base shrink-0';
+                iconEl.innerHTML = '<i class="fa-regular fa-calendar-plus"></i>';
+            } else {
+                iconEl.className = 'w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-400/30 flex items-center justify-center text-base shrink-0';
+                iconEl.innerHTML = '<i class="fa-solid fa-circle-play"></i>';
+            }
+
+            popper.classList.remove('hidden', 'popper-exit');
+            popper.classList.add('popper-enter');
+
+            clearTimeout(window.__statusPopperTimer);
+            window.__statusPopperTimer = setTimeout(() => {
+                popper.classList.remove('popper-enter');
+                popper.classList.add('popper-exit');
+                setTimeout(() => popper.classList.add('hidden'), 220);
+            }, 1200);
+        };
+
+        window.showCategoryPopper = function(catLabel, catKey, taskTitle) {
+            const popper = document.getElementById('categoryPopper');
+            const textEl = document.getElementById('categoryPopperText');
+            const subEl = document.getElementById('categoryPopperSub');
+            const iconEl = document.getElementById('categoryPopperIcon');
+            if (!popper || !textEl || !subEl || !iconEl) return;
+
+            const cat = categoryMap[catKey] || { icon: 'fa-tag' };
+            textEl.textContent = catLabel;
+            subEl.textContent = taskTitle;
+            iconEl.innerHTML = `<i class="fa-solid ${cat.icon}"></i>`;
+
+            popper.classList.remove('hidden', 'popper-exit');
+            popper.classList.add('popper-enter');
+
+            clearTimeout(window.__catPopperTimer);
+            window.__catPopperTimer = setTimeout(() => {
+                popper.classList.remove('popper-enter');
+                popper.classList.add('popper-exit');
+                setTimeout(() => popper.classList.add('hidden'), 220);
+            }, 1400);
+        };
+
+        window.showDriverPopper = function(driverName) {
+            const popper = document.getElementById('driverPopper');
+            const textEl = document.getElementById('driverPopperText');
+            if (!popper || !textEl) return;
+
+            textEl.textContent = driverName;
+            popper.classList.remove('hidden', 'popper-exit');
+            popper.classList.add('popper-enter');
+
+            clearTimeout(window.__driverPopperTimer);
+            window.__driverPopperTimer = setTimeout(() => {
+                popper.classList.remove('popper-enter');
+                popper.classList.add('popper-exit');
+                setTimeout(() => popper.classList.add('hidden'), 220);
+            }, 1400);
+        };
+
+        window.openDriverPickerModal = function(id, e) {
+            if (e) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+            const delivery = state.deliveries.find(d => d.id === id);
+            if (!delivery) return;
+
+            state.activeActionId = id;
+            state.selectedDriverRadio = delivery.driver || DRIVERS_LIST[0];
+
+            document.getElementById('driverPickerTaskTitle').textContent = delivery.title;
+            const container = document.getElementById('driverRadioList');
+
+            container.innerHTML = DRIVERS_LIST.map(driver => {
+                const isSelected = driver === state.selectedDriverRadio;
+                return `
+                    <label class="flex items-center justify-between p-2 rounded-xl border ${isSelected ? 'border-blue-500 bg-blue-50/60' : 'border-slate-200 hover:bg-slate-50'} cursor-pointer transition">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-7 h-7 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold">
+                                ${driver.charAt(0).toUpperCase()}
+                            </div>
+                            <span class="text-xs font-semibold text-slate-800">${escapeHtml(driver)}</span>
+                        </div>
+                        <input type="radio" name="driverRadioChoice" value="${escapeHtml(driver)}" ${isSelected ? 'checked' : ''} onchange="window.selectDriverRadio('${escapeHtml(driver)}')" class="text-blue-600 focus:ring-blue-500">
+                    </label>
+                `;
+            }).join('');
+
+            document.getElementById('driverPickerModal').classList.remove('hidden');
+        };
+
+        window.selectDriverRadio = function(driverName) {
+            state.selectedDriverRadio = driverName;
+            document.querySelectorAll('#driverRadioList label').forEach(lbl => {
+                const radio = lbl.querySelector('input[type="radio"]');
+                if (radio && radio.checked) {
+                    lbl.className = 'flex items-center justify-between p-2 rounded-xl border border-blue-500 bg-blue-50/60 cursor-pointer transition';
+                } else {
+                    lbl.className = 'flex items-center justify-between p-2 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition';
+                }
+            });
+        };
+
+        window.closeDriverPickerModal = function() {
+            document.getElementById('driverPickerModal').classList.add('hidden');
+        };
+
+        window.openCategoryPicker = function(id, e) {
+            if (e) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+            const delivery = state.deliveries.find(d => d.id === id);
+            if (!delivery) return;
+
+            state.activeActionId = id;
+            document.getElementById('categoryPickerTaskTitle').textContent = delivery.title;
+            const container = document.getElementById('categorySelectionContainer');
+
+            container.innerHTML = Object.keys(categoryMap).map(key => {
+                const cat = categoryMap[key];
+                const isCurrent = delivery.type === key;
+                return `
+                    <button type="button" onclick="window.applyCategorySelection('${key}')" class="w-full flex items-center justify-between p-2.5 rounded-xl border ${isCurrent ? 'border-blue-500 bg-blue-50/70' : 'border-slate-200 hover:bg-slate-50'} transition text-left cursor-pointer">
+                        <div class="flex items-center gap-2.5">
+                            <span class="w-8 h-8 rounded-lg flex items-center justify-center text-xs ${cat.bg} ${cat.text} border ${cat.border}">
+                                <i class="fa-solid ${cat.icon}"></i>
+                            </span>
+                            <span class="text-xs font-bold text-slate-800">${cat.label}</span>
+                        </div>
+                        ${isCurrent ? '<i class="fa-solid fa-circle-check text-blue-600 text-sm"></i>' : ''}
+                    </button>
+                `;
+            }).join('');
+
+            document.getElementById('categoryPickerModal').classList.remove('hidden');
+        };
+
+        window.applyCategorySelection = function(catKey) {
+            const delivery = state.deliveries.find(d => d.id === state.activeActionId);
+            if (!delivery) return;
+
+            db.collection("deliveries").doc(delivery.id).update({ type: catKey });
+            closeCategoryPickerModal();
+            showCategoryPopper(categoryMap[catKey]?.label || catKey, catKey, delivery.title);
+        };
+
+        window.closeCategoryPickerModal = function() {
+            document.getElementById('categoryPickerModal').classList.add('hidden');
+        };
+
+        window.openStatusModal = function(id, e) {
+            if (e) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+            const delivery = state.deliveries.find(d => d.id === id);
+            if (!delivery) return;
+
+            state.activeActionId = id;
+            document.getElementById('statusPickerTaskTitle').textContent = delivery.title;
+
+            const optContainer = document.getElementById('statusPickerOptionsContainer');
+            if (optContainer) {
+                optContainer.innerHTML = Object.keys(statusMap).map(key => {
+                    const s = statusMap[key];
+                    const isCurrent = delivery.status === key;
+                    return `
+                        <button type="button" onclick="window.applyStatusSelection('${key}')" class="w-full flex items-center justify-between p-2 rounded-xl border ${isCurrent ? 'border-blue-500 ring-2 ring-blue-200' : s.border} ${s.bg} hover:opacity-85 transition text-left text-xs font-semibold ${s.text}">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full ${s.dot}"></span>
+                                <span>${s.label}</span>
+                            </div>
+                            ${isCurrent ? '<i class="fa-solid fa-check text-xs"></i>' : ''}
+                        </button>
+                    `;
+                }).join('');
+            }
+
+            const d = new Date(delivery.date + 'T00:00:00');
+            d.setDate(d.getDate() + 1);
+            document.getElementById('postponeDateInput').value = toISODate(d);
+
+            document.getElementById('statusPickerModal').classList.remove('hidden');
+        };
+
+        window.closeStatusModal = function() {
+            document.getElementById('statusPickerModal').classList.add('hidden');
+        };
+
+        window.applyStatusSelection = function(newStatus) {
+            const id = state.activeActionId;
+            closeStatusModal();
+            showStatusPopper(statusMap[newStatus]?.label || newStatus, newStatus);
+
+            if (newStatus === 'COMPLETED' || newStatus === 'CANCELLED') {
+                performSmoothSinkingAnimation(id, newStatus);
+            } else {
+                db.collection("deliveries").doc(id).update({ status: newStatus });
+            }
+        };
+
+        window.quickShiftPostpone = function(daysToAdd) {
+            const input = document.getElementById('postponeDateInput');
+            const baseDate = input.value ? new Date(input.value + 'T00:00:00') : new Date();
+            baseDate.setDate(baseDate.getDate() + daysToAdd);
+            input.value = toISODate(baseDate);
+        };
+
+        window.applyPostponeDate = function() {
+            const newDate = document.getElementById('postponeDateInput').value;
+            if (!newDate) return;
+
+            const delivery = state.deliveries.find(d => d.id === state.activeActionId);
+            if (!delivery) return;
+
+            db.collection("deliveries").doc(delivery.id).update({
+                date: newDate,
+                status: 'TO_DO'
+            });
+
+            closeStatusModal();
+            state.currentDate = new Date(newDate + 'T00:00:00');
+            showStatusPopper(`Postponed to ${formatDisplayDate(new Date(newDate + 'T00:00:00'))}`, 'POSTPONED');
+        };
+
+        window.showQuickDetailsModal = function(id, e) {
+            if (e) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+            const delivery = state.deliveries.find(d => d.id === id);
+            if (!delivery) return;
+
+            state.activeViewingId = id;
+            const hasDetails = Boolean(delivery.details && delivery.details.trim().length > 0);
+
+            document.getElementById('quickDetailsDeliveryTitle').textContent = delivery.title;
+            document.getElementById('quickDetailsDate').textContent = formatFullDate(new Date(delivery.date + 'T00:00:00'));
+
+            const dot = document.getElementById('quickDetailsDot');
+            dot.className = `w-3 h-3 rounded-full ${hasDetails ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'} ring-2 ring-white shrink-0 shadow-xs`;
+
+            const stat = statusMap[delivery.status] || { label: delivery.status, bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-200' };
+            const badge = document.getElementById('quickDetailsStatusBadge');
+            badge.className = `px-2 py-0.5 rounded-md font-semibold text-[10px] border ${stat.bg} ${stat.text} ${stat.border}`;
+            badge.textContent = stat.label;
+
+            const content = document.getElementById('quickDetailsContent');
+            if (hasDetails) {
+                content.textContent = delivery.details;
+            } else {
+                content.innerHTML = '<span class="italic text-slate-400">No private specifications recorded. Click below to add gate pass codes, contact numbers, or delivery instructions.</span>';
+            }
+
+            document.getElementById('btnEditFromQuickDetails').onclick = () => {
+                closeQuickDetailsModal();
+                openEditModal(delivery.id);
+            };
+
+            document.getElementById('quickDetailsModal').classList.remove('hidden');
+        };
+
+        window.closeQuickDetailsModal = function() {
+            document.getElementById('quickDetailsModal').classList.add('hidden');
+        };
+
+        window.showAttachmentModal = function(id, e) {
+            if (e) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+            const delivery = state.deliveries.find(d => d.id === id);
+            if (!delivery || !delivery.attachment) return;
+
+            state.activeViewingId = id;
+            document.getElementById('attachmentModalDeliveryTitle').textContent = delivery.title;
+            document.getElementById('attachmentModalFileName').textContent = delivery.attachment.name;
+            document.getElementById('attachmentModalFileSize').textContent = `Size: ${delivery.attachment.size}`;
+
+            const fileIcon = document.getElementById('attachmentModalFileIcon');
+            const ext = (delivery.attachment.name.split('.').pop() || '').toLowerCase();
+            if (ext === 'pdf') {
+                fileIcon.className = 'w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center text-lg shrink-0 shadow-sm';
+                fileIcon.innerHTML = '<i class="fa-solid fa-file-pdf"></i>';
+            } else if (['doc', 'docx'].includes(ext)) {
+                fileIcon.className = 'w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-lg shrink-0 shadow-sm';
+                fileIcon.innerHTML = '<i class="fa-solid fa-file-word"></i>';
+            } else {
+                fileIcon.className = 'w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center text-lg shrink-0 shadow-sm';
+                fileIcon.innerHTML = '<i class="fa-solid fa-file"></i>';
+            }
+
+            document.getElementById('attachmentViewerModal').classList.remove('hidden');
+        };
+
+        window.closeAttachmentModal = function() {
+            document.getElementById('attachmentViewerModal').classList.add('hidden');
+        };
+
+        window.downloadSimulatedAttachment = function() {
+            const delivery = state.deliveries.find(d => d.id === state.activeViewingId);
+            const fileName = delivery && delivery.attachment ? delivery.attachment.name : 'delivery-attachment.pdf';
+            showStatusPopper(`Downloaded ${fileName}`, 'COMPLETED');
+            closeAttachmentModal();
+        };
+
+        window.openViewModal = function(id) {
+            const delivery = state.deliveries.find(d => d.id === id);
+            if (!delivery) return;
+
+            state.activeViewingId = id;
+            document.getElementById('viewTitle').textContent = delivery.title;
+            document.getElementById('viewMessage').textContent = delivery.message || 'No additional card note';
+            document.getElementById('viewDate').textContent = formatFullDate(new Date(delivery.date + 'T00:00:00'));
+            document.getElementById('viewDriver').textContent = delivery.driver || 'Unassigned';
+
+            const cat = categoryMap[delivery.type] || { label: delivery.type, icon: 'fa-tag', bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-200' };
+            document.getElementById('viewTypeContainer').innerHTML = `
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-semibold border ${cat.bg} ${cat.text} ${cat.border}">
+                    <i class="fa-solid ${cat.icon} text-[10px]"></i>
+                    <span>${cat.label}</span>
+                </span>
+            `;
+
+            const stat = statusMap[delivery.status] || { label: delivery.status, dot: 'bg-slate-400', bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-200' };
+            document.getElementById('viewStatusContainer').innerHTML = `
+                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-xs font-semibold border ${stat.bg} ${stat.text} ${stat.border}">
+                    <span class="w-2 h-2 rounded-full ${stat.dot}"></span>
+                    <span>${stat.label}</span>
+                </span>
+            `;
+
+            const hasDetails = Boolean(delivery.details && delivery.details.trim().length > 0);
+            document.getElementById('viewDetailDot').className = `w-3 h-3 rounded-full ${hasDetails ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'} ring-2 ring-white shrink-0`;
+            document.getElementById('viewDetails').textContent = hasDetails ? delivery.details : 'No specifications recorded.';
+
+            const attachSec = document.getElementById('viewAttachmentSection');
+            if (delivery.attachment) {
+                attachSec.classList.remove('hidden');
+                document.getElementById('viewAttachmentName').textContent = `${delivery.attachment.name} (${delivery.attachment.size})`;
+            } else {
+                attachSec.classList.add('hidden');
+            }
+
+            document.getElementById('viewModal').classList.remove('hidden');
+        };
+
+        window.closeViewModal = function() {
+            document.getElementById('viewModal').classList.add('hidden');
+        };
+
+        window.openEditModal = function(id, e) {
+            if (e) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+            const delivery = state.deliveries.find(d => d.id === id);
+            if (!delivery) return;
+
+            closeViewModal();
+            closeQuickDetailsModal();
+            closeAttachmentModal();
+
+            document.getElementById('editDeliveryId').value = delivery.id;
+            document.getElementById('editTitle').value = delivery.title;
+            document.getElementById('editDate').value = delivery.date;
+            document.getElementById('editDriver').value = delivery.driver || DRIVERS_LIST[0];
+            document.getElementById('editType').value = delivery.type;
+            document.getElementById('editStatus').value = delivery.status;
+            document.getElementById('editMessage').value = delivery.message || '';
+            document.getElementById('editDetails').value = delivery.details || '';
+
+            state.editAttachment = delivery.attachment ? { ...delivery.attachment } : null;
+            renderAttachmentPreview('edit');
+
+            document.getElementById('editModal').classList.remove('hidden');
+
+            setTimeout(() => {
+                const titleInput = document.getElementById('editTitle');
+                if (titleInput) {
+                    titleInput.focus();
+                    titleInput.select();
+                }
+            }, 60);
+        };
+
+        window.closeEditModal = function() {
+            document.getElementById('editModal').classList.add('hidden');
+        };
+
+        window.openCreateModalForDate = function(isoDate) {
+            document.getElementById('createTitle').value = '';
+            document.getElementById('createDate').value = isoDate || toISODate(state.currentDate);
+            document.getElementById('createDriver').value = DRIVERS_LIST[0];
+            document.getElementById('createType').value = Object.keys(categoryMap)[0] || 'DELIVERY';
+            document.getElementById('createStatus').value = Object.keys(statusMap)[0] || 'TO_DO';
+            document.getElementById('createMessage').value = '';
+            document.getElementById('createDetails').value = '';
+            state.createAttachment = null;
+            renderAttachmentPreview('create');
+
+            document.getElementById('createModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('createTitle')?.focus(), 60);
+        };
+
+        window.closeCreateModal = function() {
+            document.getElementById('createModal').classList.add('hidden');
+        };
+
+        function renderAttachmentPreview(mode) {
+            const container = document.getElementById(mode === 'create' ? 'createAttachmentPreview' : 'editAttachmentPreview');
+            const fileObj = mode === 'create' ? state.createAttachment : state.editAttachment;
+
+            if (!container) return;
+            if (!fileObj) {
+                container.innerHTML = '<span class="text-slate-400 italic">No document attached</span>';
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 text-xs font-medium max-w-full">
+                    <i class="fa-solid fa-file text-blue-600"></i>
+                    <span class="truncate">${escapeHtml(fileObj.name)}</span>
+                    <button type="button" onclick="window.removeAttachment('${mode}')" class="text-rose-500 hover:text-rose-700 ml-1 font-bold">×</button>
+                </div>
+            `;
+        }
+
+        window.removeAttachment = function(mode) {
+            if (mode === 'create') state.createAttachment = null;
+            else state.editAttachment = null;
+            renderAttachmentPreview(mode);
+        };
+
+        window.showDeleteConfirmDialog = function(id, e) {
+            if (e) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+            state.itemPendingDelete = id;
+
+            window.closeViewModal();
+            window.closeQuickDetailsModal();
+            window.closeEditModal();
+            window.closeAttachmentModal();
+
+            document.getElementById('deleteConfirmModal').classList.remove('hidden');
+        };
+
+        window.promptDeleteDelivery = window.showDeleteConfirmDialog;
+
+        document.getElementById('btnCancelDelete').addEventListener('click', () => {
+            state.itemPendingDelete = null;
+            document.getElementById('deleteConfirmModal').classList.add('hidden');
+        });
+
+        document.getElementById('btnConfirmDelete').addEventListener('click', () => {
+            if (!state.itemPendingDelete) return;
+            const targetId = String(state.itemPendingDelete);
+            
+            db.collection("deliveries").doc(targetId).delete();
+
+            state.itemPendingDelete = null;
+            document.getElementById('deleteConfirmModal').classList.add('hidden');
+
+            window.closeViewModal();
+            window.closeEditModal();
+            window.closeQuickDetailsModal();
+            window.closeAttachmentModal();
+
+            showStatusPopper('Schedule Deleted', 'CANCELLED');
+        });
+
+        function navigatePeriod(step) {
+            const d = new Date(state.currentDate);
+            if (state.viewMode === 'MONTH') {
+                d.setMonth(d.getMonth() + step);
+            } else if (state.viewMode === 'WEEK') {
+                d.setDate(d.getDate() + (step * 7));
+            } else if (state.viewMode === 'FOUR_DAY') {
+                d.setDate(d.getDate() + (step * 4));
+            } else if (state.viewMode === 'THREE_DAY') {
+                d.setDate(d.getDate() + (step * 3));
+            } else if (state.viewMode === 'DAY') {
+                d.setDate(d.getDate() + step);
+            }
+            state.currentDate = d;
+            renderCalendar();
+        }
+
+        function initSwipeGestures() {
+            const container = document.getElementById('calendarContainer');
+            if (!container) return;
+
+            let touchStartX = 0;
+            let touchStartY = 0;
+
+            container.addEventListener('touchstart', (e) => {
+                if (e.target.closest('[draggable="true"]')) return;
+                touchStartX = e.changedTouches[0].screenX;
+                touchStartY = e.changedTouches[0].screenY;
+            }, { passive: true });
+
+            container.addEventListener('touchend', (e) => {
+                if (e.target.closest('[draggable="true"]')) return;
+                const touchEndX = e.changedTouches[0].screenX;
+                const touchEndY = e.changedTouches[0].screenY;
+                const deltaX = touchEndX - touchStartX;
+                const deltaY = touchEndY - touchStartY;
+
+                if (Math.abs(deltaX) > 60 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+                    if (deltaX < 0) {
+                        navigatePeriod(1);
+                    } else {
+                        navigatePeriod(-1);
+                    }
+                }
+            }, { passive: true });
+        }
+
+        function attachDragAndDropHandlers() {
+            const cards = document.querySelectorAll('[draggable="true"]');
+            const dropCells = document.querySelectorAll('.calendar-day-cell');
+
+            cards.forEach(card => {
+                card.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', card.getAttribute('data-id'));
+                    e.dataTransfer.effectAllowed = 'move';
+                    setTimeout(() => card.classList.add('opacity-40'), 0);
+                });
+
+                card.addEventListener('dragend', () => {
+                    card.classList.remove('opacity-40');
+                });
+            });
+
+            dropCells.forEach(cell => {
+                cell.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    cell.classList.add('drag-over-cell');
+                });
+
+                cell.addEventListener('dragleave', () => {
+                    cell.classList.remove('drag-over-cell');
+                });
+
+                cell.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    cell.classList.remove('drag-over-cell');
+                    const deliveryId = e.dataTransfer.getData('text/plain');
+                    const targetDate = cell.getAttribute('data-date');
+
+                    if (!deliveryId || !targetDate) return;
+
+                    db.collection("deliveries").doc(deliveryId).update({ date: targetDate });
+                    showStatusPopper(`Moved to ${formatFullDate(new Date(targetDate + 'T00:00:00'))}`, 'POSTPONED');
+                });
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initCloudSync();
+
+            // Form Submit: Add New Driver
+            document.getElementById('addDriverForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const name = document.getElementById('newDriverInput').value.trim();
+                if (name && !DRIVERS_LIST.includes(name)) {
+                    DRIVERS_LIST.push(name);
+                    saveMetaToCloud();
+                    closeAddDriverModal();
+                    showDriverPopper(`Added: ${name}`);
+                }
+            });
+
+            // Form Submit: Add New Category Type
+            document.getElementById('addCategoryForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const label = document.getElementById('newCategoryLabelInput').value.trim();
+                const icon = document.getElementById('newCategoryIconSelect').value;
+                if (label) {
+                    const key = 'TYPE_' + Date.now();
+                    categoryMap[key] = {
+                        label: label,
+                        icon: icon,
+                        bg: 'bg-indigo-50',
+                        text: 'text-indigo-700',
+                        border: 'border-indigo-200'
+                    };
+                    saveMetaToCloud();
+                    closeAddCategoryModal();
+                    showCategoryPopper(label, key, 'New Category Created');
+                }
+            });
+
+            // Form Submit: Add New Custom Status
+            document.getElementById('addStatusForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const label = document.getElementById('newStatusLabelInput').value.trim();
+                const color = document.getElementById('newStatusColorSelect').value;
+                if (label) {
+                    const key = 'STAT_' + Date.now();
+                    const colorThemes = {
+                        amber: { dot: 'bg-amber-500', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+                        sky: { dot: 'bg-sky-500', bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200' },
+                        violet: { dot: 'bg-violet-500', bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200' },
+                        cyan: { dot: 'bg-cyan-500', bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200' },
+                        slate: { dot: 'bg-slate-500', bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-200' }
+                    };
+                    const theme = colorThemes[color] || colorThemes.slate;
+                    statusMap[key] = {
+                        label: label,
+                        dot: theme.dot,
+                        bg: theme.bg,
+                        text: theme.text,
+                        border: theme.border,
+                        sortRank: 1.5
+                    };
+                    saveMetaToCloud();
+                    closeAddStatusModal();
+                    showStatusPopper(`Added Status: ${label}`, key);
+                }
+            });
+
+            document.getElementById('viewModeGroup').addEventListener('click', (e) => {
+                const btn = e.target.closest('.view-btn');
+                if (btn) {
+                    state.viewMode = btn.getAttribute('data-view');
+                    renderCalendar();
+                }
+            });
+
+            document.getElementById('btnPrev').addEventListener('click', () => navigatePeriod(-1));
+            document.getElementById('btnNext').addEventListener('click', () => navigatePeriod(1));
+            document.getElementById('btnToday').addEventListener('click', () => {
+                state.currentDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                renderCalendar();
+            });
+
+            document.getElementById('jumpDatePicker').addEventListener('change', (e) => {
+                if (e.target.value) {
+                    state.currentDate = new Date(e.target.value + 'T00:00:00');
+                    renderCalendar();
+                }
+            });
+
+            document.getElementById('filterDriver').addEventListener('change', (e) => {
+                state.selectedDriver = e.target.value;
+                renderCalendar();
+            });
+            document.getElementById('filterCategory').addEventListener('change', (e) => {
+                state.selectedCategory = e.target.value;
+                renderCalendar();
+            });
+            document.getElementById('filterStatus').addEventListener('change', (e) => {
+                state.selectedStatus = e.target.value;
+                renderCalendar();
+            });
+
+            document.getElementById('btnOpenCreate').addEventListener('click', () => {
+                openCreateModalForDate(toISODate(state.currentDate));
+            });
+            document.getElementById('btnCloseStatusModal')?.addEventListener('click', closeStatusModal);
+
+            document.getElementById('btnConfirmDriverAssignment').addEventListener('click', () => {
+                const delivery = state.deliveries.find(d => d.id === state.activeActionId);
+                if (delivery && state.selectedDriverRadio) {
+                    db.collection("deliveries").doc(delivery.id).update({ driver: state.selectedDriverRadio });
+                    closeDriverPickerModal();
+                    showDriverPopper(`Driver: ${state.selectedDriverRadio}`);
+                }
+            });
+
+            document.getElementById('createFileInput').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+                    state.createAttachment = { name: file.name, size: `${sizeMb > 0 ? sizeMb : '0.4'} MB` };
+                    renderAttachmentPreview('create');
+                }
+            });
+
+            document.getElementById('editFileInput').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+                    state.editAttachment = { name: file.name, size: `${sizeMb > 0 ? sizeMb : '0.4'} MB` };
+                    renderAttachmentPreview('edit');
+                }
+            });
+
+            document.getElementById('createDeliveryForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const newDelivery = {
+                    title: document.getElementById('createTitle').value.trim(),
+                    date: document.getElementById('createDate').value,
+                    driver: document.getElementById('createDriver').value,
+                    type: document.getElementById('createType').value,
+                    status: document.getElementById('createStatus').value,
+                    message: document.getElementById('createMessage').value.trim(),
+                    details: document.getElementById('createDetails').value.trim(),
+                    attachment: state.createAttachment || null
+                };
+
+                db.collection("deliveries").add(newDelivery);
+                closeCreateModal();
+                showStatusPopper('Delivery Scheduled', newDelivery.status);
+            });
+
+            document.getElementById('editDeliveryForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const id = document.getElementById('editDeliveryId').value;
+                if (!id) return;
+
+                const updatedData = {
+                    title: document.getElementById('editTitle').value.trim(),
+                    date: document.getElementById('editDate').value,
+                    driver: document.getElementById('editDriver').value,
+                    type: document.getElementById('editType').value,
+                    status: document.getElementById('editStatus').value,
+                    message: document.getElementById('editMessage').value.trim(),
+                    details: document.getElementById('editDetails').value.trim(),
+                    attachment: state.editAttachment || null
+                };
+
+                db.collection("deliveries").doc(id).update(updatedData);
+                closeEditModal();
+                showStatusPopper('Schedule Saved', updatedData.status);
+            });
+
+            document.getElementById('btnEditFromView').addEventListener('click', () => {
+                if (state.activeViewingId) {
+                    openEditModal(state.activeViewingId);
+                }
+            });
+
+            document.getElementById('btnDeleteFromView').addEventListener('click', () => {
+                if (state.activeViewingId) {
+                    showDeleteConfirmDialog(state.activeViewingId);
+                }
+            });
+
+            document.getElementById('btnDeleteFromEdit').addEventListener('click', () => {
+                const id = document.getElementById('editDeliveryId').value;
+                if (id) {
+                    showDeleteConfirmDialog(id);
+                }
+            });
+
+            initSwipeGestures();
+        });
+    </script>
 </body>
 </html>
