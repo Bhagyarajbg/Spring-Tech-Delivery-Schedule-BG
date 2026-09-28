@@ -174,7 +174,7 @@
         </div>
     </header>
 
-    <main class="flex-1 max-w-7xl w-full mx-auto p-2 sm:p-4 md:p-6 flex flex-col">
+    <main class="flex-1 max-w-7xl w-full mx-auto p-1.5 sm:p-2 md:p-3 flex flex-col">
         <div id="calendarContainer" class="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[580px]"></div>
     </main>
 
@@ -693,8 +693,10 @@
                         <input type="date" id="createDate" required class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Driver / Logistics <span class="text-rose-500">*</span></label>
-                        <select id="createDriver" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40"></select>
+                        <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Driver / Logistics</label>
+                        <select id="createDriver" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+                            <option value=""></option>
+                        </select>
                     </div>
                 </div>
 
@@ -760,6 +762,40 @@
             'Osman', 'Hamad Ali', 'Awais', 'Outside Vehicle', 'Cust. Collection', 'Courier'
         ];
 
+        // Unique very light pastel colors for each driver
+        const DRIVER_PALETTE = [
+            { bg: 'bg-sky-50', hover: 'hover:bg-sky-100', dot: 'bg-sky-500', border: 'border-sky-300' },
+            { bg: 'bg-emerald-50', hover: 'hover:bg-emerald-100', dot: 'bg-emerald-500', border: 'border-emerald-300' },
+            { bg: 'bg-amber-50', hover: 'hover:bg-amber-100', dot: 'bg-amber-500', border: 'border-amber-300' },
+            { bg: 'bg-purple-50', hover: 'hover:bg-purple-100', dot: 'bg-purple-500', border: 'border-purple-300' },
+            { bg: 'bg-cyan-50', hover: 'hover:bg-cyan-100', dot: 'bg-cyan-500', border: 'border-cyan-300' },
+            { bg: 'bg-orange-50', hover: 'hover:bg-orange-100', dot: 'bg-orange-500', border: 'border-orange-300' },
+            { bg: 'bg-teal-50', hover: 'hover:bg-teal-100', dot: 'bg-teal-500', border: 'border-teal-300' },
+            { bg: 'bg-indigo-50', hover: 'hover:bg-indigo-100', dot: 'bg-indigo-500', border: 'border-indigo-300' },
+            { bg: 'bg-rose-50', hover: 'hover:bg-rose-100', dot: 'bg-rose-500', border: 'border-rose-300' },
+            { bg: 'bg-lime-50', hover: 'hover:bg-lime-100', dot: 'bg-lime-500', border: 'border-lime-300' },
+            { bg: 'bg-violet-50', hover: 'hover:bg-violet-100', dot: 'bg-violet-500', border: 'border-violet-300' },
+            { bg: 'bg-fuchsia-50', hover: 'hover:bg-fuchsia-100', dot: 'bg-fuchsia-500', border: 'border-fuchsia-300' }
+        ];
+
+        function getDriverColor(driverName) {
+            if (!driverName || !driverName.trim()) {
+                return { bg: 'bg-slate-50', hover: 'hover:bg-slate-100', dot: 'bg-slate-400', border: 'border-slate-300' };
+            }
+            const name = driverName.trim();
+            const index = DRIVERS_LIST.indexOf(name);
+            if (index !== -1) {
+                return DRIVER_PALETTE[index % DRIVER_PALETTE.length];
+            }
+            // Deterministic hash for any newly added custom driver
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) {
+                hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const colorIndex = Math.abs(hash) % DRIVER_PALETTE.length;
+            return DRIVER_PALETTE[colorIndex];
+        }
+
         // Specific category mappings with updated labels
         let categoryMap = {
             TODO: { label: 'Todo', icon: 'fa-list-check', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
@@ -817,17 +853,17 @@
         const today = new Date();
         const state = {
             currentDate: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
-            viewMode: 'WEEK',
+            viewMode: 'FOUR_DAY',
             selectedDriver: 'ALL',
             selectedCategory: 'ALL',
             selectedStatus: 'ALL',
-            dayFilters: {},
             activeViewingId: null,
             activeActionId: null,
             selectedDriverRadio: null,
             itemPendingDelete: null,
             createAttachment: null,
             editAttachment: null,
+            expandedDoneDates: new Set(),
             deliveries: []
         };
 
@@ -872,17 +908,33 @@
 
         function sortDayDeliveries(list) {
             return list.slice().sort((a, b) => {
-                const getRank = (status) => {
-                    if (statusMap[status] && typeof statusMap[status].sortRank === 'number') {
-                        return statusMap[status].sortRank;
-                    }
-                    if (status === 'DELIVERED') return 2;
-                    if (status === 'CANCELLED') return 3;
-                    return 1;
+                // Tier 0: Active tasks (come first)
+                // Tier 1: Delivered tasks (go towards bottom)
+                // Tier 2: Cancelled tasks (go at the very end)
+                const getTier = (status) => {
+                    if (status === 'DELIVERED') return 1;
+                    if (status === 'CANCELLED') return 2;
+                    return 0;
                 };
-                const rankA = getRank(a.status);
-                const rankB = getRank(b.status);
-                if (rankA !== rankB) return rankA - rankB;
+
+                const tierA = getTier(a.status);
+                const tierB = getTier(b.status);
+                if (tierA !== tierB) {
+                    return tierA - tierB;
+                }
+
+                // Within the same tier, sort and group by Driver name
+                const driverA = (a.driver || '').trim().toLowerCase();
+                const driverB = (b.driver || '').trim().toLowerCase();
+
+                // Put unassigned drivers at the end of the active group
+                if (driverA && !driverB) return -1;
+                if (!driverA && driverB) return 1;
+                if (driverA !== driverB) {
+                    return driverA.localeCompare(driverB);
+                }
+
+                // If same driver, sort alphabetically by title
                 return (a.title || '').localeCompare(b.title || '');
             });
         }
@@ -890,63 +942,99 @@
         function renderDetailedCard(item) {
             const hasDetails = Boolean(item.details && item.details.trim().length > 0);
             const isCancelled = item.status === 'CANCELLED';
+            const isDelivered = item.status === 'DELIVERED';
 
-            const titleClasses = isCancelled ? 'font-medium text-slate-400 line-through' : 'font-semibold text-slate-800';
+            const titleClasses = isCancelled ? 'font-medium text-slate-400 line-through' : 'font-bold text-slate-900';
 
-            const cat = categoryMap[item.type] || { label: item.type, icon: 'fa-tag', bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-200' };
-            const stat = statusMap[item.status] || { label: item.status, dot: 'bg-slate-400', bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-200' };
+            const dColor = getDriverColor(item.driver);
+            let cardBg = `${dColor.bg} ${dColor.hover}`;
+            if (isCancelled) {
+                cardBg = 'bg-slate-100/90 text-slate-400';
+            } else if (isDelivered) {
+                cardBg = `${dColor.bg} opacity-90`;
+            }
 
-            const messageHtml = (item.message && item.message.trim().length > 0)
-                ? `<div class="text-[11px] text-slate-500 leading-snug break-words mt-0.5 ${isCancelled ? 'line-through text-slate-400' : ''}">${escapeHtml(item.message)}</div>`
-                : '';
+            const cat = categoryMap[item.type] || { label: item.type, icon: 'fa-tag', bg: 'bg-white/90', text: 'text-slate-800', border: 'border-slate-300' };
+            const stat = statusMap[item.status] || { label: item.status, dot: 'bg-slate-400', bg: 'bg-white/90', text: 'text-slate-800', border: 'border-slate-300' };
 
             const attachmentIcon = item.attachment
-                ? `<button type="button" title="Attachment: ${escapeHtml(item.attachment.name)} (Click to view)" onclick="window.showAttachmentModal('${item.id}', event)" class="w-6 h-6 rounded-md hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-blue-600 shrink-0 text-xs transition cursor-pointer"><i class="fa-solid fa-paperclip"></i></button>`
+                ? `<button type="button" title="Attachment: ${escapeHtml(item.attachment.name)} (Click to view)" onclick="window.showAttachmentModal('${item.id}', event)" class="w-4 h-4 rounded hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-blue-600 shrink-0 text-[8px] transition cursor-pointer"><i class="fa-solid fa-paperclip"></i></button>`
                 : '';
 
             const dotIndicator = `
-                <button type="button" title="${hasDetails ? 'Click to view private details' : 'No details recorded (Click to add)'}" onclick="window.showQuickDetailsModal('${item.id}', event)" class="p-1 rounded-full hover:ring-2 hover:ring-slate-300 flex items-center justify-center cursor-pointer transition shrink-0">
-                    <span class="w-2.5 h-2.5 rounded-full ${hasDetails ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'} ring-2 ring-white shrink-0 shadow-xs"></span>
+                <button type="button" title="${hasDetails ? 'Click to view private details' : 'No details recorded (Click to add)'}" onclick="window.showQuickDetailsModal('${item.id}', event)" class="p-0.5 rounded-full hover:ring-1 hover:ring-slate-300 flex items-center justify-center cursor-pointer transition shrink-0">
+                    <span class="w-1.5 h-1.5 rounded-full ${hasDetails ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'} ring-1 ring-white shrink-0 shadow-xs"></span>
                 </button>
             `;
 
             return `
-                <div id="card-${item.id}" draggable="true" data-id="${item.id}" onclick="window.openViewModal('${item.id}')" class="group relative bg-white border border-slate-200/90 hover:border-blue-400/80 rounded-xl p-2.5 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col gap-2 select-none">
-                    <div class="w-full">
-                        <h4 class="text-xs leading-snug break-words ${titleClasses}">${escapeHtml(item.title)}</h4>
-                        ${messageHtml}
-                    </div>
+                <div id="card-${item.id}" draggable="true" data-id="${item.id}" onclick="window.openViewModal('${item.id}')" class="group relative ${cardBg} border border-black rounded-md p-1 shadow-xs hover:shadow transition-all cursor-pointer flex flex-col gap-0.5 select-none">
+                    <!-- Top Row: Inline Title + Quick Action Icons -->
+                    <div class="flex items-start justify-between gap-1 w-full" onclick="event.stopPropagation()">
+                        <div class="flex-1 min-w-0">
+                            <!-- Direct Click-To-Edit Title -->
+                            <div id="title-disp-${item.id}" onclick="window.startInlineTitleEdit('${item.id}', event)" title="Click directly to edit title" class="cursor-text group/title rounded px-1 -mx-0.5 py-0 hover:bg-black/5 border border-transparent hover:border-blue-400 transition-all flex items-center justify-between gap-1">
+                                <h4 class="text-[10px] sm:text-[10.5px] leading-tight break-words line-clamp-2 flex-1 ${titleClasses}">${escapeHtml(item.title)}</h4>
+                                <i class="fa-solid fa-pen text-[6.5px] text-slate-400 group-hover/title:text-blue-600 opacity-0 group-hover/title:opacity-100 shrink-0 transition"></i>
+                            </div>
+                            <div id="title-edit-box-${item.id}" class="hidden my-0.5">
+                                <input type="text" id="title-input-${item.id}"
+                                    value="${escapeHtml(item.title)}"
+                                    onkeydown="window.handleTitleKey(event, '${item.id}')"
+                                    onblur="window.saveInlineTitle('${item.id}')"
+                                    class="w-full text-[10px] font-semibold text-slate-900 bg-white border border-blue-500 rounded px-1 py-0.5 shadow-xs focus:outline-none ring-1 ring-blue-100">
+                            </div>
+                        </div>
 
-                    <div class="flex items-center justify-between gap-1.5 text-slate-600 text-[11px]" onclick="event.stopPropagation()">
-                        <button type="button" title="Click to assign driver" onclick="window.openDriverPickerModal('${item.id}', event)" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 font-medium transition max-w-[140px] truncate border border-slate-200/80 cursor-pointer">
-                            <i class="fa-solid fa-user-circle text-slate-400 text-xs shrink-0"></i>
-                            <span class="truncate">${escapeHtml(item.driver || 'Select Driver')}</span>
-                            <i class="fa-solid fa-chevron-down text-[8px] opacity-60 ml-0.5 shrink-0"></i>
-                        </button>
-
-                        <div class="flex items-center gap-1 shrink-0">
-                            <button type="button" title="Delete schedule" onclick="window.showDeleteConfirmDialog('${item.id}', event)" class="w-6 h-6 rounded-md hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center transition">
-                                <i class="fa-regular fa-trash-can text-[11px]"></i>
-                            </button>
-                            <button type="button" title="Edit schedule directly" onclick="window.openEditModal('${item.id}', event)" class="w-6 h-6 rounded-md hover:bg-blue-50 text-slate-400 hover:text-blue-600 flex items-center justify-center transition">
-                                <i class="fa-solid fa-pen text-[10px]"></i>
-                            </button>
+                        <!-- Top-Right Compact Action Icons -->
+                        <div class="flex items-center gap-0.5 shrink-0 pt-0.5">
                             ${attachmentIcon}
                             ${dotIndicator}
+                            <button type="button" title="Edit schedule details" onclick="window.openEditModal('${item.id}', event)" class="w-4 h-4 rounded hover:bg-white/60 text-slate-600 hover:text-blue-700 flex items-center justify-center transition">
+                                <i class="fa-solid fa-sliders text-[7.5px]"></i>
+                            </button>
+                            <button type="button" title="Delete schedule" onclick="window.showDeleteConfirmDialog('${item.id}', event)" class="w-4 h-4 rounded hover:bg-white/60 text-slate-600 hover:text-rose-700 flex items-center justify-center transition">
+                                <i class="fa-regular fa-trash-can text-[8px]"></i>
+                            </button>
                         </div>
                     </div>
 
-                    <!-- Bottom Action Row: Level Buttons with identical height and alignment -->
-                    <div class="flex items-center justify-between gap-1.5 pt-1.5 border-t border-slate-100 h-8" onclick="event.stopPropagation()">
-                        <button type="button" title="Click to change category" onclick="window.openCategoryPicker('${item.id}', event)" class="h-7 inline-flex items-center gap-1 px-2 rounded-lg text-[10px] font-semibold border ${cat.bg} ${cat.text} ${cat.border} hover:opacity-85 transition truncate cursor-pointer flex-1 min-w-0">
-                            <i class="fa-solid ${cat.icon} text-[9px] shrink-0"></i>
+                    <!-- Direct Click-To-Edit Message Note (Ultra-compact) -->
+                    <div class="w-full" onclick="event.stopPropagation()">
+                        <div id="msg-disp-${item.id}" onclick="window.startInlineMessageEdit('${item.id}', event)" title="Click directly to edit note" class="cursor-text group/msg rounded px-1 -mx-0.5 py-0 hover:bg-black/5 border border-transparent hover:border-blue-400 transition-all flex items-center justify-between gap-1">
+                            <p class="text-[9px] text-slate-700 font-medium leading-tight truncate flex-1 ${isCancelled ? 'line-through text-slate-400' : ''}">
+                                ${item.message && item.message.trim().length > 0 ? escapeHtml(item.message) : '<span class="italic text-slate-400 font-normal text-[8.5px] opacity-70 group-hover:opacity-100">+ Note</span>'}
+                            </p>
+                            <i class="fa-solid fa-pen text-[6px] text-slate-400 group-hover/msg:text-blue-600 opacity-0 group-hover/msg:opacity-100 shrink-0 transition"></i>
+                        </div>
+                        <div id="msg-edit-box-${item.id}" class="hidden my-0.5">
+                            <input type="text" id="msg-input-${item.id}"
+                                placeholder="Add card note..."
+                                value="${escapeHtml(item.message || '')}"
+                                onkeydown="window.handleMessageKey(event, '${item.id}')"
+                                onblur="window.saveInlineMessage('${item.id}')"
+                                class="w-full text-[9px] font-normal text-slate-800 bg-white border border-blue-500 rounded px-1 py-0.5 shadow-xs focus:outline-none ring-1 ring-blue-100">
+                        </div>
+                    </div>
+
+                    <!-- Single Compact Row: Driver, Category, and Status -->
+                    <div class="flex items-center gap-1 w-full pt-0.5 border-t border-black/10 overflow-hidden" onclick="event.stopPropagation()">
+                        <!-- Driver Pill Button -->
+                        <button type="button" title="Click to assign driver" onclick="window.openDriverPickerModal('${item.id}', event)" class="h-4 inline-flex items-center gap-0.5 px-1.5 rounded bg-white/90 hover:bg-white text-slate-900 font-bold transition whitespace-nowrap border border-black/15 shadow-2xs cursor-pointer text-[8.5px] shrink-0">
+                            <span class="w-1.5 h-1.5 rounded-full ${dColor.dot} shrink-0"></span>
+                            <span>${escapeHtml(item.driver || 'Driver')}</span>
+                        </button>
+
+                        <!-- Category Pill Button -->
+                        <button type="button" title="Click to change category" onclick="window.openCategoryPicker('${item.id}', event)" class="h-4 inline-flex items-center gap-0.5 px-1 rounded text-[8.5px] font-semibold border ${cat.bg} ${cat.text} ${cat.border} hover:opacity-85 transition whitespace-nowrap cursor-pointer flex-1 min-w-0">
+                            <i class="fa-solid ${cat.icon} text-[7px] shrink-0"></i>
                             <span class="truncate">${cat.label}</span>
                         </button>
 
-                        <button type="button" title="Click to update status or postpone" onclick="window.openStatusModal('${item.id}', event)" class="h-7 inline-flex items-center gap-1 px-2 rounded-lg text-[10px] font-semibold border ${stat.bg} ${stat.text} ${stat.border} hover:opacity-85 transition cursor-pointer shrink-0">
-                            <span class="w-1.5 h-1.5 rounded-full ${stat.dot}"></span>
+                        <!-- Status Pill Button -->
+                        <button type="button" title="Click to update status or postpone" onclick="window.openStatusModal('${item.id}', event)" class="h-4 inline-flex items-center gap-0.5 px-1 rounded text-[7.5px] font-semibold border ${stat.bg} ${stat.text} ${stat.border} hover:opacity-85 transition whitespace-nowrap cursor-pointer shrink-0">
+                            <span class="w-1.5 h-1.5 rounded-full ${stat.dot} shrink-0"></span>
                             <span>${stat.label}</span>
-                            <i class="fa-solid fa-chevron-down text-[8px] opacity-60 ml-0.5"></i>
                         </button>
                     </div>
                 </div>
@@ -957,31 +1045,44 @@
             const hasDetails = Boolean(item.details && item.details.trim().length > 0);
             const isCancelled = item.status === 'CANCELLED';
             const isDelivered = item.status === 'DELIVERED';
+            const dColor = getDriverColor(item.driver);
 
-            let borderAndBg = 'border-l-[3px] border-l-blue-500 bg-white hover:bg-blue-50/40 border-slate-200/90 text-slate-800';
+            let borderAndBg = `border-l-[3px] border-l-blue-500 ${dColor.bg} hover:brightness-95 border-black text-slate-800`;
             if (isDelivered) {
-                borderAndBg = 'border-l-[3px] border-l-emerald-500 bg-emerald-50/20 hover:bg-emerald-50/50 border-emerald-200/70 text-slate-800';
+                borderAndBg = `border-l-[3px] border-l-emerald-500 ${dColor.bg} opacity-90 border-black text-slate-800`;
             } else if (isCancelled) {
-                borderAndBg = 'border-l-[3px] border-l-rose-400 bg-slate-50/80 hover:bg-rose-50/30 border-slate-200 text-slate-400';
+                borderAndBg = 'border-l-[3px] border-l-rose-400 bg-slate-50/80 hover:bg-rose-50/30 border-black text-slate-400';
             }
 
             const titleClasses = isCancelled ? 'line-through text-slate-400 font-medium' : 'font-medium text-slate-800';
 
             const attachmentIcon = item.attachment
-                ? `<button type="button" title="Attachment: ${escapeHtml(item.attachment.name)} (Click to view)" onclick="window.showAttachmentModal('${item.id}', event)" class="w-4 h-4 rounded hover:bg-slate-200/60 flex items-center justify-center text-slate-500 hover:text-blue-600 shrink-0 text-[10px] transition cursor-pointer"><i class="fa-solid fa-paperclip"></i></button>`
+                ? `<button type="button" title="Attachment: ${escapeHtml(item.attachment.name)} (Click to view)" onclick="window.showAttachmentModal('${item.id}', event)" class="w-4 h-4 rounded hover:bg-slate-200/60 flex items-center justify-center text-slate-500 hover:text-blue-600 shrink-0 text-[8px] transition cursor-pointer"><i class="fa-solid fa-paperclip"></i></button>`
                 : '';
 
             const dotIndicator = `
-                <button type="button" title="${hasDetails ? 'Click to view private details' : 'No details (Click to add)'}" onclick="window.showQuickDetailsModal('${item.id}', event)" class="p-0.5 rounded-full hover:ring-2 hover:ring-slate-300 flex items-center justify-center cursor-pointer transition">
-                    <span class="w-2 h-2 rounded-full ${hasDetails ? 'bg-rose-500 ring-2 ring-white shadow-xs' : 'bg-emerald-500 ring-2 ring-white shadow-xs'}"></span>
+                <button type="button" title="${hasDetails ? 'Click to view private details' : 'No details (Click to add)'}" onclick="window.showQuickDetailsModal('${item.id}', event)" class="p-0.5 rounded-full hover:ring-1 hover:ring-slate-300 flex items-center justify-center cursor-pointer transition">
+                    <span class="w-1.5 h-1.5 rounded-full ${hasDetails ? 'bg-rose-500 ring-1 ring-white shadow-xs' : 'bg-emerald-500 ring-1 ring-white shadow-xs'}"></span>
                 </button>
             `;
 
             return `
-                <div id="card-${item.id}" draggable="true" data-id="${item.id}" onclick="window.openViewModal('${item.id}')" class="group relative border rounded-lg px-2 py-1.5 shadow-xs hover:shadow transition-all cursor-pointer flex items-center justify-between gap-1 select-none ${borderAndBg}">
-                    <span class="text-xs leading-snug break-words line-clamp-2 flex-1 ${titleClasses}">${escapeHtml(item.title)}</span>
-                    <div class="flex items-center gap-1 shrink-0 ml-1" onclick="event.stopPropagation()">
-                        <button type="button" title="Delete task" onclick="window.showDeleteConfirmDialog('${item.id}', event)" class="opacity-0 group-hover:opacity-100 hover:text-rose-600 text-slate-400 transition text-[11px] p-0.5">
+                <div id="card-${item.id}" draggable="true" data-id="${item.id}" onclick="window.openViewModal('${item.id}')" class="group relative border rounded px-1.5 py-1 shadow-xs hover:shadow transition-all cursor-pointer flex items-center justify-between gap-1 select-none ${borderAndBg}">
+                    <div class="flex-1 min-w-0" onclick="event.stopPropagation()">
+                        <div id="comp-title-disp-${item.id}" onclick="window.startInlineTitleEdit('${item.id}', event)" title="Click directly to edit title" class="cursor-text group/title rounded px-1 -mx-0.5 py-0.2 hover:bg-blue-100/50 flex items-center justify-between gap-1 transition">
+                            <span class="text-[10px] leading-tight break-words line-clamp-2 flex-1 ${titleClasses}">${escapeHtml(item.title)}</span>
+                            <i class="fa-solid fa-pen text-[7px] text-slate-300 group-hover/title:text-blue-500 opacity-0 group-hover/title:opacity-100 shrink-0 transition"></i>
+                        </div>
+                        <div id="comp-title-edit-box-${item.id}" class="hidden my-0.5">
+                            <input type="text" id="comp-title-input-${item.id}"
+                                value="${escapeHtml(item.title)}"
+                                onkeydown="window.handleTitleKey(event, '${item.id}')"
+                                onblur="window.saveInlineTitle('${item.id}')"
+                                class="w-full text-[10px] font-semibold text-slate-900 bg-white border border-blue-500 rounded px-1 py-0.5 shadow-xs focus:outline-none">
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-0.5 shrink-0 ml-0.5" onclick="event.stopPropagation()">
+                        <button type="button" title="Delete task" onclick="window.showDeleteConfirmDialog('${item.id}', event)" class="opacity-0 group-hover:opacity-100 hover:text-rose-600 text-slate-400 transition text-[8px] p-0.5">
                             <i class="fa-regular fa-trash-can"></i>
                         </button>
                         ${attachmentIcon}
@@ -991,62 +1092,430 @@
             `;
         }
 
+        function renderMultiDayView(container, titleDisplay, items, numDays, useCompactCards) {
+            const start = new Date(state.currentDate);
+            if (numDays === 7) {
+                start.setDate(start.getDate() - start.getDay());
+            }
+
+            const daysArray = [];
+            for (let i = 0; i < numDays; i++) {
+                const d = new Date(start);
+                d.setDate(d.getDate() + i);
+                daysArray.push(d);
+            }
+
+            const firstDateStr = formatFullDate(daysArray[0]);
+            titleDisplay.textContent = numDays === 1 ? firstDateStr : `${formatDisplayDate(daysArray[0])} – ${formatDisplayDate(daysArray[daysArray.length - 1])}`;
+
+            const gridColsClass = {
+                7: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 min-w-[1300px] lg:min-w-0',
+                4: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4 min-w-[960px] md:min-w-0',
+                3: 'grid-cols-1 sm:grid-cols-3 min-w-[750px] sm:min-w-0',
+                1: 'grid-cols-1'
+            }[numDays] || 'grid-cols-1';
+
+            let html = `<div class="flex-1 overflow-x-auto"><div class="h-full grid ${gridColsClass} divide-x divide-y md:divide-y-0 divide-slate-100 min-h-[520px]">`;
+
+            daysArray.forEach(d => {
+                const isoDate = toISODate(d);
+                const isToday = toISODate(today) === isoDate;
+                const dayTasks = sortDayDeliveries(items.filter(item => item.date === isoDate));
+
+                const activeTasks = dayTasks.filter(item => item.status !== 'DELIVERED' && item.status !== 'CANCELLED');
+                const deliveredTasks = dayTasks.filter(item => item.status === 'DELIVERED');
+                const cancelledTasks = dayTasks.filter(item => item.status === 'CANCELLED');
+
+                let tasksHtml = '';
+                if (dayTasks.length === 0) {
+                    tasksHtml = `
+                        <div class="h-20 flex flex-col items-center justify-center text-center text-slate-300 text-[10px] border border-dashed border-slate-200 rounded-lg my-auto">
+                            <i class="fa-regular fa-calendar-xmark text-sm mb-1 opacity-60"></i>
+                            <span>No deliveries</span>
+                        </div>
+                    `;
+                } else {
+                    // Render active tasks first (grouped by driver)
+                    if (activeTasks.length > 0) {
+                        tasksHtml += activeTasks.map(item => useCompactCards ? renderCompactNameCard(item) : renderDetailedCard(item)).join('');
+                    }
+
+                    // Interactive toggle button for Delivered and Cancelled tasks
+                    const totalDone = deliveredTasks.length + cancelledTasks.length;
+                    if (totalDone > 0) {
+                        const isExpanded = state.expandedDoneDates.has(isoDate);
+                        const doneCardsHtml = (
+                            (deliveredTasks.length > 0 ? deliveredTasks.map(item => useCompactCards ? renderCompactNameCard(item) : renderDetailedCard(item)).join('') : '') +
+                            (cancelledTasks.length > 0 ? cancelledTasks.map(item => useCompactCards ? renderCompactNameCard(item) : renderDetailedCard(item)).join('') : '')
+                        );
+
+                        tasksHtml += `
+                            <div class="my-0.5 flex items-center gap-0.5 select-none" title="Click to show/hide delivered and cancelled tasks">
+                                <div class="h-[1px] flex-1 bg-black/40"></div>
+                                <button type="button" onclick="window.toggleDeliveredCancelled('${isoDate}', event)" class="inline-flex items-center gap-1 font-bold uppercase tracking-tighter text-slate-800 bg-slate-200 hover:bg-slate-300 active:bg-slate-400 px-1 py-0.5 rounded border border-black/40 leading-none shrink-0 shadow-2xs transition-colors cursor-pointer max-w-[92%]" style="font-size: 7px; line-height: 1;">
+                                    <span class="truncate">Delivered/Cancelled (${totalDone})</span>
+                                    <i class="fa-solid fa-chevron-${isExpanded ? 'up' : 'down'} text-[5.5px] shrink-0"></i>
+                                </button>
+                                <div class="h-[1px] flex-1 bg-black/40"></div>
+                            </div>
+                            <div id="done-container-${isoDate}" class="flex flex-col gap-1 ${isExpanded ? '' : 'hidden'}">
+                                ${doneCardsHtml}
+                            </div>
+                        `;
+                    }
+                }
+
+                html += `
+                    <div class="calendar-day-cell flex flex-col p-1.5 bg-white min-h-[440px] gap-1 transition-colors" data-date="${isoDate}">
+                        <div class="pb-1 border-b border-slate-200/90 flex items-center justify-between gap-1">
+                            <div class="min-w-0">
+                                <span class="text-[9px] font-bold uppercase tracking-wider text-slate-400 block leading-tight">
+                                    ${shortDayNames[d.getDay()]}
+                                </span>
+                                <span class="text-[11px] font-bold leading-tight truncate block ${isToday ? 'text-blue-600' : 'text-slate-800'}" title="${formatFullDate(d)}">
+                                    ${formatFullDate(d)}
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-1 shrink-0">
+                                <span class="px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-slate-100 text-slate-600">
+                                    ${dayTasks.length}
+                                </span>
+                                <button type="button" title="Add schedule for this date" onclick="window.openCreateModalForDate('${isoDate}')" class="w-5 h-5 rounded hover:bg-slate-100 text-slate-400 hover:text-blue-600 flex items-center justify-center transition">
+                                    <i class="fa-solid fa-plus text-[9px]"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="day-tasks-container flex-1 flex flex-col gap-1 overflow-y-auto pr-0.5">
+                            ${tasksHtml}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div></div>`;
+            container.innerHTML = html;
+        }
+
+        function renderMonthView(container, titleDisplay, items) {
+            const year = state.currentDate.getFullYear();
+            const month = state.currentDate.getMonth();
+            titleDisplay.textContent = `${fullMonthNames[month]} ${year}`;
+
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const lastDate = new Date(year, month + 1, 0).getDate();
+            const prevLastDate = new Date(year, month, 0).getDate();
+
+            let html = `
+                <div class="flex-1 flex flex-col min-h-[520px]">
+                    <div class="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-600 text-center py-1.5">
+                        ${shortDayNames.map(d => `<div>${d}</div>`).join('')}
+                    </div>
+                    <div class="flex-1 grid grid-cols-7 divide-x divide-y divide-slate-100">
+            `;
+
+            // Previous month padding days
+            for (let i = firstDayIndex - 1; i >= 0; i--) {
+                const dayNum = prevLastDate - i;
+                const d = new Date(year, month - 1, dayNum);
+                const iso = toISODate(d);
+                html += `
+                    <div class="calendar-day-cell bg-slate-50/50 p-1 min-h-[90px] flex flex-col opacity-50" data-date="${iso}">
+                        <span class="text-[9px] font-semibold text-slate-400">${dayNum}</span>
+                    </div>
+                `;
+            }
+
+            // Current month days
+            for (let dayNum = 1; dayNum <= lastDate; dayNum++) {
+                const d = new Date(year, month, dayNum);
+                const iso = toISODate(d);
+                const isToday = toISODate(today) === iso;
+                const dayTasks = sortDayDeliveries(items.filter(item => item.date === iso));
+
+                const activeTasks = dayTasks.filter(item => item.status !== 'DELIVERED' && item.status !== 'CANCELLED');
+                const deliveredTasks = dayTasks.filter(item => item.status === 'DELIVERED');
+                const cancelledTasks = dayTasks.filter(item => item.status === 'CANCELLED');
+
+                let monthTasksHtml = '';
+                if (activeTasks.length > 0) {
+                    monthTasksHtml += activeTasks.map(item => renderCompactNameCard(item)).join('');
+                }
+                const totalDoneMonth = deliveredTasks.length + cancelledTasks.length;
+                if (totalDoneMonth > 0) {
+                    const isExpanded = state.expandedDoneDates.has(iso);
+                    const doneCardsHtml = (
+                        (deliveredTasks.length > 0 ? deliveredTasks.map(item => renderCompactNameCard(item)).join('') : '') +
+                        (cancelledTasks.length > 0 ? cancelledTasks.map(item => renderCompactNameCard(item)).join('') : '')
+                    );
+
+                    monthTasksHtml += `
+                        <div class="my-0.5 flex items-center gap-0.5 select-none" title="Click to show/hide delivered and cancelled tasks">
+                            <div class="h-[0.5px] flex-1 bg-black/40"></div>
+                            <button type="button" onclick="window.toggleDeliveredCancelled('${iso}', event)" class="inline-flex items-center gap-0.5 font-bold uppercase tracking-tighter text-slate-800 bg-slate-200 hover:bg-slate-300 px-0.5 py-0.5 rounded border border-black/40 leading-none shrink-0 cursor-pointer max-w-[95%]" style="font-size: 6px; line-height: 1;">
+                                <span class="truncate">Delivered/Cancelled (${totalDoneMonth})</span>
+                                <i class="fa-solid fa-chevron-${isExpanded ? 'up' : 'down'} text-[4.5px] shrink-0"></i>
+                            </button>
+                            <div class="h-[0.5px] flex-1 bg-black/40"></div>
+                        </div>
+                        <div id="month-done-container-${iso}" class="flex flex-col gap-0.5 ${isExpanded ? '' : 'hidden'}">
+                            ${doneCardsHtml}
+                        </div>
+                    `;
+                }
+
+                html += `
+                    <div class="calendar-day-cell bg-white p-1 min-h-[90px] flex flex-col gap-0.5 hover:bg-slate-50/60 transition-colors" data-date="${iso}">
+                        <div class="flex items-center justify-between pb-0.5">
+                            <span class="text-[9px] font-bold ${isToday ? 'w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center' : 'text-slate-700'}">${dayNum}</span>
+                            ${dayTasks.length > 0 ? `<span class="text-[8px] font-semibold text-slate-500">${dayTasks.length}</span>` : ''}
+                        </div>
+                        <div class="flex-1 flex flex-col gap-0.5 overflow-y-auto">
+                            ${monthTasksHtml}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Next month padding days to complete grid
+            const totalCells = firstDayIndex + lastDate;
+            const remaining = (7 - (totalCells % 7)) % 7;
+            for (let i = 1; i <= remaining; i++) {
+                const d = new Date(year, month + 1, i);
+                const iso = toISODate(d);
+                html += `
+                    <div class="calendar-day-cell bg-slate-50/50 p-1 min-h-[90px] flex flex-col opacity-50" data-date="${iso}">
+                        <span class="text-[9px] font-semibold text-slate-400">${i}</span>
+                    </div>
+                `;
+            }
+
+            html += `</div></div>`;
+            container.innerHTML = html;
+        }
+
+        function renderCalendar() {
+            const container = document.getElementById('calendarContainer');
+            const titleDisplay = document.getElementById('periodDisplayTitle');
+            if (!container || !titleDisplay) return;
+
+            document.querySelectorAll('#viewModeGroup .view-btn').forEach(btn => {
+                const isActive = btn.getAttribute('data-view') === state.viewMode;
+                if (isActive) {
+                    btn.className = 'view-btn px-2.5 py-1.5 rounded-lg transition bg-white text-blue-600 font-bold shadow-xs';
+                } else {
+                    btn.className = 'view-btn px-2.5 py-1.5 rounded-lg transition hover:text-slate-900';
+                }
+            });
+
+            const jumpPicker = document.getElementById('jumpDatePicker');
+            if (jumpPicker) {
+                jumpPicker.value = toISODate(state.currentDate);
+            }
+
+            let filtered = state.deliveries.slice();
+            if (state.selectedDriver !== 'ALL') {
+                filtered = filtered.filter(d => d.driver === state.selectedDriver);
+            }
+            if (state.selectedCategory !== 'ALL') {
+                filtered = filtered.filter(d => d.type === state.selectedCategory);
+            }
+            if (state.selectedStatus !== 'ALL') {
+                filtered = filtered.filter(d => d.status === state.selectedStatus);
+            }
+
+            if (state.viewMode === 'MONTH') {
+                renderMonthView(container, titleDisplay, filtered);
+            } else if (state.viewMode === 'WEEK') {
+                renderMultiDayView(container, titleDisplay, filtered, 7, false);
+            } else if (state.viewMode === 'FOUR_DAY') {
+                renderMultiDayView(container, titleDisplay, filtered, 4, false);
+            } else if (state.viewMode === 'THREE_DAY') {
+                renderMultiDayView(container, titleDisplay, filtered, 3, false);
+            } else if (state.viewMode === 'DAY') {
+                renderMultiDayView(container, titleDisplay, filtered, 1, false);
+            }
+
+            attachDragAndDropHandlers();
+        }
+
         function refreshDropdownOptions() {
             const filterDriver = document.getElementById('filterDriver');
             const createDriver = document.getElementById('createDriver');
             const editDriver = document.getElementById('editDriver');
 
-            const currentFilterDriver = filterDriver.value;
-            filterDriver.innerHTML = '<option value="ALL">All Drivers &amp; Logistics</option>';
-            createDriver.innerHTML = '';
-            editDriver.innerHTML = '';
+            if (filterDriver) {
+                const currentVal = filterDriver.value || 'ALL';
+                filterDriver.innerHTML = `<option value="ALL">All Drivers &amp; Logistics</option>` +
+                    DRIVERS_LIST.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+                filterDriver.value = currentVal;
+            }
 
-            DRIVERS_LIST.forEach(d => {
-                filterDriver.appendChild(new Option(d, d, false, d === currentFilterDriver));
-                createDriver.appendChild(new Option(d, d));
-                editDriver.appendChild(new Option(d, d));
+            [createDriver, editDriver].forEach(sel => {
+                if (sel) {
+                    const current = sel.value;
+                    sel.innerHTML = `<option value=""></option>` + DRIVERS_LIST.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+                    if (current && DRIVERS_LIST.includes(current)) {
+                        sel.value = current;
+                    } else {
+                        sel.value = '';
+                    }
+                }
             });
 
             const filterCategory = document.getElementById('filterCategory');
             const createType = document.getElementById('createType');
             const editType = document.getElementById('editType');
 
-            const currentFilterCat = filterCategory.value;
-            filterCategory.innerHTML = '<option value="ALL">All Categories</option>';
-            createType.innerHTML = '';
-            editType.innerHTML = '';
+            if (filterCategory) {
+                const currentVal = filterCategory.value || 'ALL';
+                filterCategory.innerHTML = `<option value="ALL">All Categories</option>` +
+                    Object.keys(categoryMap).map(k => `<option value="${k}">${escapeHtml(categoryMap[k].label)}</option>`).join('');
+                filterCategory.value = currentVal;
+            }
 
-            Object.keys(categoryMap).forEach(key => {
-                const label = categoryMap[key].label;
-                filterCategory.appendChild(new Option(label, key, false, key === currentFilterCat));
-                createType.appendChild(new Option(label, key));
-                editType.appendChild(new Option(label, key));
+            [createType, editType].forEach(sel => {
+                if (sel) {
+                    const current = sel.value;
+                    sel.innerHTML = Object.keys(categoryMap).map(k => `<option value="${k}">${escapeHtml(categoryMap[k].label)}</option>`).join('');
+                    if (current && categoryMap[current]) sel.value = current;
+                }
             });
 
             const filterStatus = document.getElementById('filterStatus');
             const createStatus = document.getElementById('createStatus');
             const editStatus = document.getElementById('editStatus');
 
-            const currentFilterStat = filterStatus.value;
-            filterStatus.innerHTML = '<option value="ALL">All Statuses</option>';
-            createStatus.innerHTML = '';
-            editStatus.innerHTML = '';
+            if (filterStatus) {
+                const currentVal = filterStatus.value || 'ALL';
+                filterStatus.innerHTML = `<option value="ALL">All Statuses</option>` +
+                    Object.keys(statusMap).map(k => `<option value="${k}">${escapeHtml(statusMap[k].label)}</option>`).join('');
+                filterStatus.value = currentVal;
+            }
 
-            Object.keys(statusMap).forEach(key => {
-                const label = statusMap[key].label;
-                filterStatus.appendChild(new Option(label, key, false, key === currentFilterStat));
-                createStatus.appendChild(new Option(label, key));
-                editStatus.appendChild(new Option(label, key));
+            [createStatus, editStatus].forEach(sel => {
+                if (sel) {
+                    const current = sel.value;
+                    sel.innerHTML = Object.keys(statusMap).map(k => `<option value="${k}">${escapeHtml(statusMap[k].label)}</option>`).join('');
+                    if (current && statusMap[current]) sel.value = current;
+                }
             });
 
-            const legendEl = document.getElementById('dynamicStatusLegend');
-            if (legendEl) {
-                legendEl.innerHTML = Object.keys(statusMap).map(key => {
-                    const s = statusMap[key];
-                    return `<span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full ${s.dot}"></span> ${escapeHtml(s.label)}</span>`;
-                }).join('') + `<span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500 ring-2 ring-rose-200"></span> Details</span>`;
+            const legend = document.getElementById('dynamicStatusLegend');
+            if (legend) {
+                legend.innerHTML = Object.keys(statusMap).map(k => {
+                    const s = statusMap[k];
+                    return `
+                        <div class="inline-flex items-center gap-1">
+                            <span class="w-2 h-2 rounded-full ${s.dot}"></span>
+                            <span class="text-[10px] font-medium text-slate-600">${escapeHtml(s.label)}</span>
+                        </div>
+                    `;
+                }).join('');
             }
         }
+
+        window.startInlineTitleEdit = function(id, e) {
+            if (e) e.stopPropagation();
+            const disp = document.getElementById(`title-disp-${id}`);
+            const box = document.getElementById(`title-edit-box-${id}`);
+            const input = document.getElementById(`title-input-${id}`);
+
+            const compDisp = document.getElementById(`comp-title-disp-${id}`);
+            const compBox = document.getElementById(`comp-title-edit-box-${id}`);
+            const compInput = document.getElementById(`comp-title-input-${id}`);
+
+            const card = document.getElementById(`card-${id}`);
+            if (card) card.setAttribute('draggable', 'false');
+
+            if (disp && box && input) {
+                disp.classList.add('hidden');
+                box.classList.remove('hidden');
+                input.focus();
+                input.select();
+            } else if (compDisp && compBox && compInput) {
+                compDisp.classList.add('hidden');
+                compBox.classList.remove('hidden');
+                compInput.focus();
+                compInput.select();
+            }
+        };
+
+        window.saveInlineTitle = function(id) {
+            const card = document.getElementById(`card-${id}`);
+            if (card) card.setAttribute('draggable', 'true');
+
+            const input = document.getElementById(`title-input-${id}`) || document.getElementById(`comp-title-input-${id}`);
+            if (!input) return;
+
+            const newTitle = input.value.trim();
+            const delivery = state.deliveries.find(d => d.id === id);
+
+            if (newTitle && delivery && newTitle !== delivery.title) {
+                db.collection("deliveries").doc(id).update({ title: newTitle });
+                showStatusPopper('Title Updated', delivery.status);
+            } else {
+                renderCalendar();
+            }
+        };
+
+        window.handleTitleKey = function(e, id) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.target.blur();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                const delivery = state.deliveries.find(d => d.id === id);
+                if (delivery) e.target.value = delivery.title;
+                e.target.blur();
+            }
+        };
+
+        window.startInlineMessageEdit = function(id, e) {
+            if (e) e.stopPropagation();
+            const disp = document.getElementById(`msg-disp-${id}`);
+            const box = document.getElementById(`msg-edit-box-${id}`);
+            const input = document.getElementById(`msg-input-${id}`);
+            const card = document.getElementById(`card-${id}`);
+            if (card) card.setAttribute('draggable', 'false');
+
+            if (disp && box && input) {
+                disp.classList.add('hidden');
+                box.classList.remove('hidden');
+                input.focus();
+                input.select();
+            }
+        };
+
+        window.saveInlineMessage = function(id) {
+            const card = document.getElementById(`card-${id}`);
+            if (card) card.setAttribute('draggable', 'true');
+
+            const input = document.getElementById(`msg-input-${id}`);
+            if (!input) return;
+
+            const newMsg = input.value.trim();
+            const delivery = state.deliveries.find(d => d.id === id);
+
+            if (delivery && newMsg !== (delivery.message || '')) {
+                db.collection("deliveries").doc(id).update({ message: newMsg });
+                showStatusPopper('Note Updated', delivery.status);
+            } else {
+                renderCalendar();
+            }
+        };
+
+        window.handleMessageKey = function(e, id) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.target.blur();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                const delivery = state.deliveries.find(d => d.id === id);
+                if (delivery) e.target.value = delivery.message || '';
+                e.target.blur();
+            }
+        };
 
         window.openAddDriverModal = function() {
             document.getElementById('newDriverInput').value = '';
@@ -1075,216 +1544,23 @@
             document.getElementById('addStatusModal').classList.add('hidden');
         };
 
-        function getFilteredDeliveries() {
-            return state.deliveries.filter(item => {
-                if (state.selectedDriver !== 'ALL' && item.driver !== state.selectedDriver) return false;
-                if (state.selectedCategory !== 'ALL' && item.type !== state.selectedCategory) return false;
-                if (state.selectedStatus !== 'ALL' && item.status !== state.selectedStatus) return false;
-                return true;
-            });
-        }
-
-        window.setDayFilter = function(isoDate, filterKey, val) {
-            if (!state.dayFilters[isoDate]) {
-                state.dayFilters[isoDate] = { driver: 'ALL', type: 'ALL', status: 'ALL' };
+        window.toggleDeliveredCancelled = function(isoDate, e) {
+            if (e) { e.stopPropagation(); e.preventDefault(); }
+            if (state.expandedDoneDates.has(isoDate)) {
+                state.expandedDoneDates.delete(isoDate);
+            } else {
+                state.expandedDoneDates.add(isoDate);
             }
-            state.dayFilters[isoDate][filterKey] = val;
             renderCalendar();
         };
-
-        function renderCalendar() {
-            const container = document.getElementById('calendarContainer');
-            const titleDisplay = document.getElementById('periodDisplayTitle');
-            const datePicker = document.getElementById('jumpDatePicker');
-            const filtered = getFilteredDeliveries();
-
-            if (datePicker) {
-                datePicker.value = toISODate(state.currentDate);
-            }
-
-            document.querySelectorAll('.view-btn').forEach(btn => {
-                const mode = btn.getAttribute('data-view');
-                if (mode === state.viewMode) {
-                    btn.className = 'view-btn px-2.5 py-1.5 rounded-lg transition bg-white text-blue-600 shadow-xs font-bold';
-                } else {
-                    btn.className = 'view-btn px-2.5 py-1.5 rounded-lg transition text-slate-600 hover:text-slate-900 font-semibold';
-                }
-            });
-
-            if (state.viewMode === 'MONTH') {
-                renderMonthView(container, titleDisplay, filtered);
-            } else if (state.viewMode === 'WEEK') {
-                renderMultiDayView(container, titleDisplay, filtered, 7, true);
-            } else if (state.viewMode === 'FOUR_DAY') {
-                renderMultiDayView(container, titleDisplay, filtered, 4, false);
-            } else if (state.viewMode === 'THREE_DAY') {
-                renderMultiDayView(container, titleDisplay, filtered, 3, false);
-            } else if (state.viewMode === 'DAY') {
-                renderMultiDayView(container, titleDisplay, filtered, 1, false);
-            }
-
-            attachDragAndDropHandlers();
-        }
-
-        function renderMonthView(container, titleDisplay, items) {
-            const year = state.currentDate.getFullYear();
-            const month = state.currentDate.getMonth();
-            const firstDayOfMonth = new Date(year, month, 1);
-            const lastDayOfMonth = new Date(year, month + 1, 0);
-
-            titleDisplay.textContent = `${monthNames[month]} ${year}`;
-
-            const startDayIndex = firstDayOfMonth.getDay();
-            const totalDays = lastDayOfMonth.getDate();
-
-            let html = `
-                <div class="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center py-2">
-                    <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
-                </div>
-                <div class="flex-1 grid grid-cols-7 auto-rows-fr divide-x divide-y divide-slate-100 min-h-[500px]">
-            `;
-
-            for (let i = 0; i < startDayIndex; i++) {
-                html += `<div class="bg-slate-50/50 p-1.5 min-h-[90px] opacity-40"></div>`;
-            }
-
-            for (let day = 1; day <= totalDays; day++) {
-                const currentCellDate = new Date(year, month, day);
-                const isoDate = toISODate(currentCellDate);
-                const isToday = toISODate(today) === isoDate;
-                const dayTasks = sortDayDeliveries(items.filter(d => d.date === isoDate));
-
-                html += `
-                    <div class="calendar-day-cell p-1.5 min-h-[105px] flex flex-col gap-1 transition-colors hover:bg-slate-50/70" data-date="${isoDate}">
-                        <div class="flex items-center justify-between text-xs mb-0.5">
-                            <span class="w-6 h-6 flex items-center justify-center rounded-full text-xs font-semibold ${isToday ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-700'}">
-                                ${day}
-                            </span>
-                            <button type="button" title="Add schedule for this date" onclick="window.openCreateModalForDate('${isoDate}')" class="w-5 h-5 rounded-md hover:bg-slate-200 text-slate-400 hover:text-slate-700 flex items-center justify-center text-xs">
-                                <i class="fa-solid fa-plus text-[10px]"></i>
-                            </button>
-                        </div>
-                        <div class="flex-1 flex flex-col gap-1 overflow-y-auto max-h-[120px]">
-                            ${dayTasks.map(item => renderCompactNameCard(item)).join('')}
-                        </div>
-                    </div>
-                `;
-            }
-
-            const totalCells = startDayIndex + totalDays;
-            const remainingCells = (7 - (totalCells % 7)) % 7;
-            for (let i = 0; i < remainingCells; i++) {
-                html += `<div class="bg-slate-50/50 p-1.5 min-h-[90px] opacity-40"></div>`;
-            }
-
-            html += `</div>`;
-            container.innerHTML = html;
-        }
-
-        function renderMultiDayView(container, titleDisplay, items, numDays, useCompactCards) {
-            const start = new Date(state.currentDate);
-            if (numDays === 7) {
-                start.setDate(start.getDate() - start.getDay());
-            }
-
-            const daysArray = [];
-            for (let i = 0; i < numDays; i++) {
-                const d = new Date(start);
-                d.setDate(d.getDate() + i);
-                daysArray.push(d);
-            }
-
-            const firstDateStr = formatFullDate(daysArray[0]);
-            titleDisplay.textContent = numDays === 1 ? firstDateStr : `${formatDisplayDate(daysArray[0])} – ${formatDisplayDate(daysArray[daysArray.length - 1])}`;
-
-            const gridColsClass = {
-                7: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7',
-                4: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4',
-                3: 'grid-cols-1 sm:grid-cols-3',
-                1: 'grid-cols-1'
-            }[numDays] || 'grid-cols-1';
-
-            let html = `<div class="flex-1 grid ${gridColsClass} divide-x divide-y md:divide-y-0 divide-slate-100 min-h-[500px]">`;
-
-            daysArray.forEach(d => {
-                const isoDate = toISODate(d);
-                const isToday = toISODate(today) === isoDate;
-                const dFilters = state.dayFilters[isoDate] || { driver: 'ALL', type: 'ALL', status: 'ALL' };
-
-                let dayTasks = items.filter(item => item.date === isoDate);
-                if (dFilters.driver !== 'ALL') {
-                    dayTasks = dayTasks.filter(item => item.driver === dFilters.driver);
-                }
-                if (dFilters.type !== 'ALL') {
-                    dayTasks = dayTasks.filter(item => item.type === dFilters.type);
-                }
-                if (dFilters.status !== 'ALL') {
-                    dayTasks = dayTasks.filter(item => item.status === dFilters.status);
-                }
-
-                dayTasks = sortDayDeliveries(dayTasks);
-
-                html += `
-                    <div class="calendar-day-cell flex flex-col p-2.5 bg-white min-h-[460px] gap-2 transition-colors" data-date="${isoDate}">
-                        <div class="pb-2 border-b border-slate-200/90 flex flex-col gap-1.5">
-                            <div class="flex items-center justify-between gap-1">
-                                <div class="min-w-0">
-                                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block leading-tight">
-                                        ${shortDayNames[d.getDay()]}
-                                    </span>
-                                    <span class="text-xs font-bold leading-tight truncate block ${isToday ? 'text-blue-600' : 'text-slate-800'}" title="${formatFullDate(d)}">
-                                        ${formatFullDate(d)}
-                                    </span>
-                                </div>
-                                <div class="flex items-center gap-1 shrink-0">
-                                    <span class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">
-                                        ${dayTasks.length}
-                                    </span>
-                                    <button type="button" title="Add schedule for this date" onclick="window.openCreateModalForDate('${isoDate}')" class="w-6 h-6 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-blue-600 flex items-center justify-center transition">
-                                        <i class="fa-solid fa-plus text-xs"></i>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-3 gap-1 pt-0.5">
-                                <select onchange="window.setDayFilter('${isoDate}', 'driver', this.value)" title="Filter this day by Driver" class="w-full text-[10px] font-medium bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-md px-1 py-0.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer truncate">
-                                    <option value="ALL">Driver: All</option>
-                                    ${DRIVERS_LIST.map(dr => `<option value="${escapeHtml(dr)}" ${dFilters.driver === dr ? 'selected' : ''}>${escapeHtml(dr)}</option>`).join('')}
-                                </select>
-
-                                <select onchange="window.setDayFilter('${isoDate}', 'type', this.value)" title="Filter this day by Type" class="w-full text-[10px] font-medium bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-md px-1 py-0.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer truncate">
-                                    <option value="ALL">Type: All</option>
-                                    ${Object.keys(categoryMap).map(k => `<option value="${k}" ${dFilters.type === k ? 'selected' : ''}>${escapeHtml(categoryMap[k].label)}</option>`).join('')}
-                                </select>
-
-                                <select onchange="window.setDayFilter('${isoDate}', 'status', this.value)" title="Filter this day by Status" class="w-full text-[10px] font-medium bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-md px-1 py-0.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer truncate">
-                                    <option value="ALL">Status: All</option>
-                                    ${Object.keys(statusMap).map(s => `<option value="${s}" ${dFilters.status === s ? 'selected' : ''}>${escapeHtml(statusMap[s].label)}</option>`).join('')}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="day-tasks-container flex-1 flex flex-col gap-2 overflow-y-auto pr-0.5">
-                            ${dayTasks.length === 0 ? `
-                                <div class="h-28 flex flex-col items-center justify-center text-center text-slate-300 text-xs border border-dashed border-slate-200 rounded-xl my-auto">
-                                    <i class="fa-regular fa-calendar-xmark text-lg mb-1 opacity-60"></i>
-                                    <span>No deliveries</span>
-                                </div>
-                            ` : dayTasks.map(item => useCompactCards ? renderCompactNameCard(item) : renderDetailedCard(item)).join('')}
-                        </div>
-                    </div>
-                `;
-            });
-
-            html += `</div>`;
-            container.innerHTML = html;
-        }
 
         window.performSmoothSinkingAnimation = function(deliveryId, newStatus) {
             const cardEl = document.getElementById(`card-${deliveryId}`);
             const delivery = state.deliveries.find(d => d.id === deliveryId);
             if (!delivery) return;
 
+            // Auto-expand the date container so user can view the newly moved task
+            state.expandedDoneDates.add(delivery.date);
             db.collection("deliveries").doc(deliveryId).update({ status: newStatus });
 
             if (!cardEl) {
@@ -1418,10 +1694,12 @@
 
             container.innerHTML = DRIVERS_LIST.map(driver => {
                 const isSelected = driver === state.selectedDriverRadio;
+                const dColor = getDriverColor(driver);
                 return `
-                    <label class="flex items-center justify-between p-2 rounded-xl border ${isSelected ? 'border-blue-500 bg-blue-50/60' : 'border-slate-200 hover:bg-slate-50'} cursor-pointer transition">
+                    <label class="flex items-center justify-between p-2 rounded-xl border ${isSelected ? 'border-blue-500 bg-blue-50/60 ring-1 ring-blue-300' : 'border-slate-200 hover:bg-slate-50'} cursor-pointer transition">
                         <div class="flex items-center gap-2.5">
-                            <div class="w-7 h-7 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold">
+                            <div class="w-7 h-7 rounded-lg ${dColor.bg} border border-slate-300 text-slate-800 flex items-center justify-center text-xs font-bold shadow-xs">
+                                <span class="w-2 h-2 rounded-full ${dColor.dot} mr-1"></span>
                                 ${driver.charAt(0).toUpperCase()}
                             </div>
                             <span class="text-xs font-semibold text-slate-800">${escapeHtml(driver)}</span>
@@ -1695,7 +1973,7 @@
             document.getElementById('editDeliveryId').value = delivery.id;
             document.getElementById('editTitle').value = delivery.title;
             document.getElementById('editDate').value = delivery.date;
-            document.getElementById('editDriver').value = delivery.driver || DRIVERS_LIST[0];
+            document.getElementById('editDriver').value = delivery.driver || '';
             document.getElementById('editType').value = delivery.type;
             document.getElementById('editStatus').value = delivery.status;
             document.getElementById('editMessage').value = delivery.message || '';
@@ -1722,7 +2000,7 @@
         window.openCreateModalForDate = function(isoDate) {
             document.getElementById('createTitle').value = '';
             document.getElementById('createDate').value = isoDate || toISODate(state.currentDate);
-            document.getElementById('createDriver').value = DRIVERS_LIST[0];
+            document.getElementById('createDriver').value = '';
             document.getElementById('createType').value = Object.keys(categoryMap)[0] || 'TODO';
             document.getElementById('createStatus').value = Object.keys(statusMap)[0] || 'TO_DO';
             document.getElementById('createMessage').value = '';
@@ -2018,7 +2296,7 @@
                 const newDelivery = {
                     title: document.getElementById('createTitle').value.trim(),
                     date: document.getElementById('createDate').value,
-                    driver: document.getElementById('createDriver').value,
+                    driver: document.getElementById('createDriver').value || '',
                     type: document.getElementById('createType').value,
                     status: document.getElementById('createStatus').value,
                     message: document.getElementById('createMessage').value.trim(),
