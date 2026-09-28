@@ -848,7 +848,7 @@
 
         let statusMap = {
             TO_DO: { label: 'Todo', dot: 'bg-blue-500', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', sortRank: 1 },
-            DELIVERED: { label: 'Delivered', dot: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', sortRank: 2 },
+            DELIVERED: { label: 'Completed', dot: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', sortRank: 2 },
             CANCELLED: { label: 'Cancelled', dot: 'bg-rose-500', bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', sortRank: 3 }
         };
 
@@ -925,6 +925,9 @@
                     }
                     if (data.statuses && Object.keys(data.statuses).includes('DELIVERED')) {
                         statusMap = data.statuses;
+                        if (statusMap.DELIVERED) {
+                            statusMap.DELIVERED.label = 'Completed';
+                        }
                     } else {
                         saveMetaToCloud();
                     }
@@ -1207,10 +1210,10 @@
                         );
 
                         tasksHtml += `
-                            <div class="my-0.5 flex items-center gap-0.5 select-none" title="Click to show/hide delivered and cancelled tasks">
+                            <div class="my-0.5 flex items-center gap-0.5 select-none" title="Click to show/hide completed and cancelled tasks">
                                 <div class="h-[1px] flex-1 bg-black/40"></div>
                                 <button type="button" onclick="window.toggleDeliveredCancelled('${isoDate}', event)" class="inline-flex items-center gap-1 font-bold uppercase tracking-tighter text-slate-800 bg-slate-200 hover:bg-slate-300 active:bg-slate-400 px-1 py-0.5 rounded border border-black/40 leading-none shrink-0 shadow-2xs transition-colors cursor-pointer max-w-[92%]" style="font-size: 7px; line-height: 1;">
-                                    <span class="truncate">Delivered/Cancelled (${totalDone})</span>
+                                    <span class="truncate">Completed/Cancelled (${totalDone})</span>
                                     <i class="fa-solid fa-chevron-${isExpanded ? 'up' : 'down'} text-[5.5px] shrink-0"></i>
                                 </button>
                                 <div class="h-[1px] flex-1 bg-black/40"></div>
@@ -1307,10 +1310,10 @@
                     );
 
                     monthTasksHtml += `
-                        <div class="my-0.5 flex items-center gap-0.5 select-none" title="Click to show/hide delivered and cancelled tasks">
+                        <div class="my-0.5 flex items-center gap-0.5 select-none" title="Click to show/hide completed and cancelled tasks">
                             <div class="h-[0.5px] flex-1 bg-black/40"></div>
                             <button type="button" onclick="window.toggleDeliveredCancelled('${iso}', event)" class="inline-flex items-center gap-0.5 font-bold uppercase tracking-tighter text-slate-800 bg-slate-200 hover:bg-slate-300 px-0.5 py-0.5 rounded border border-black/40 leading-none shrink-0 cursor-pointer max-w-[95%]" style="font-size: 6px; line-height: 1;">
-                                <span class="truncate">Delivered/Cancelled (${totalDoneMonth})</span>
+                                <span class="truncate">Completed/Cancelled (${totalDoneMonth})</span>
                                 <i class="fa-solid fa-chevron-${isExpanded ? 'up' : 'down'} text-[4.5px] shrink-0"></i>
                             </button>
                             <div class="h-[0.5px] flex-1 bg-black/40"></div>
