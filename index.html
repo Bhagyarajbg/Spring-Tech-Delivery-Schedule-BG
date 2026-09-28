@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full bg-slate-50">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -76,15 +76,16 @@
 </head>
 <body class="min-h-screen flex flex-col bg-slate-50 text-slate-800 antialiased selection:bg-blue-500 selection:text-white">
 
+    <!-- Top Navigation Header -->
     <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
-        <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20">
-                    <i class="fa-solid fa-truck-fast text-lg"></i>
+        <div class="w-full max-w-[98%] mx-auto px-2 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2.5">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20">
+                    <i class="fa-solid fa-truck-fast text-base"></i>
                 </div>
                 <div>
                     <div class="flex items-center gap-2">
-                        <h1 class="text-sm sm:text-base font-bold text-slate-900 tracking-tight leading-tight">
+                        <h1 class="text-sm font-bold text-slate-900 tracking-tight leading-tight">
                             Delivery Schedule &amp; Logistics
                         </h1>
                         <span id="syncBadge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
@@ -95,40 +96,62 @@
                 </div>
             </div>
 
-            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- Navigation Prev/Today/Next -->
                 <div class="inline-flex items-center rounded-xl bg-slate-100 p-0.5 border border-slate-200/80 shadow-xs">
-                    <button type="button" id="btnPrev" title="Previous period (or swipe right)" class="px-2.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white transition text-xs font-medium">
+                    <button type="button" id="btnPrev" title="Previous period" class="px-2.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white transition text-xs font-medium cursor-pointer">
                         <i class="fa-solid fa-chevron-left"></i>
                     </button>
-                    <button type="button" id="btnToday" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-white hover:text-blue-600 transition">
+                    <button type="button" id="btnToday" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-white hover:text-blue-600 transition cursor-pointer">
                         Today
                     </button>
-                    <button type="button" id="btnNext" title="Next period (or swipe left)" class="px-2.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white transition text-xs font-medium">
+                    <button type="button" id="btnNext" title="Next period" class="px-2.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white transition text-xs font-medium cursor-pointer">
                         <i class="fa-solid fa-chevron-right"></i>
                     </button>
                 </div>
 
+                <!-- Jump Date Picker -->
                 <div class="relative flex items-center">
-                    <input type="date" id="jumpDatePicker" title="Jump directly to selected date" class="bg-white border border-slate-200 text-slate-700 text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/40 shadow-xs font-medium cursor-pointer">
+                    <input type="date" id="jumpDatePicker" title="Jump directly to date" class="bg-white border border-slate-200 text-slate-700 text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/40 shadow-xs font-medium cursor-pointer">
                 </div>
 
+                <!-- View Switcher -->
                 <div id="viewModeGroup" class="inline-flex items-center rounded-xl bg-slate-100 p-0.5 border border-slate-200/80 shadow-xs text-xs font-semibold text-slate-600">
-                    <button type="button" data-view="MONTH" class="view-btn px-2.5 py-1.5 rounded-lg transition">Month</button>
-                    <button type="button" data-view="WEEK" class="view-btn px-2.5 py-1.5 rounded-lg transition">Week</button>
-                    <button type="button" data-view="FOUR_DAY" class="view-btn px-2.5 py-1.5 rounded-lg transition">4-Day</button>
-                    <button type="button" data-view="THREE_DAY" class="view-btn px-2.5 py-1.5 rounded-lg transition">3-Day</button>
-                    <button type="button" data-view="DAY" class="view-btn px-2.5 py-1.5 rounded-lg transition">Day</button>
+                    <button type="button" data-view="MONTH" class="view-btn px-2 py-1.5 rounded-lg transition">Month</button>
+                    <button type="button" data-view="WEEK" class="view-btn px-2 py-1.5 rounded-lg transition">Week</button>
+                    <button type="button" data-view="FOUR_DAY" class="view-btn px-2 py-1.5 rounded-lg transition">4-Day</button>
+                    <button type="button" data-view="THREE_DAY" class="view-btn px-2 py-1.5 rounded-lg transition">3-Day</button>
+                    <button type="button" data-view="DAY" class="view-btn px-2 py-1.5 rounded-lg transition">Day</button>
                 </div>
 
-                <button type="button" id="btnOpenCreate" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold shadow-md shadow-blue-500/20 transition cursor-pointer">
+                <!-- Zoom Step Buttons -->
+                <div class="inline-flex items-center rounded-xl bg-slate-100 p-0.5 border border-slate-200/80 shadow-xs text-xs font-semibold text-slate-600">
+                    <button type="button" onclick="window.zoomStep(1)" title="Zoom Out (Show more days, or Ctrl + Scroll Down)" class="px-2 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white transition cursor-pointer">
+                        <i class="fa-solid fa-magnifying-glass-minus text-[11px]"></i>
+                    </button>
+                    <button type="button" onclick="window.zoomStep(-1)" title="Zoom In (Show fewer days, or Ctrl + Scroll Up)" class="px-2 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white transition cursor-pointer">
+                        <i class="fa-solid fa-magnifying-glass-plus text-[11px]"></i>
+                    </button>
+                </div>
+
+                <!-- Master Edit Mode ON/OFF Toggle -->
+                <button type="button" id="btnToggleEditMode" onclick="window.handleEditToggleClick()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-bold transition shadow-xs cursor-pointer">
+                    <i class="fa-solid fa-lock text-rose-500"></i>
+                    <span>Edit: OFF</span>
+                </button>
+
+                <!-- New Schedule Button (shown only when Edit Mode is ON) -->
+                <button type="button" id="btnOpenCreate" class="items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold shadow-md shadow-blue-500/20 transition cursor-pointer hidden">
                     <i class="fa-solid fa-plus text-[11px]"></i>
                     <span class="hidden sm:inline">New Schedule</span>
                 </button>
             </div>
         </div>
 
-        <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+        <!-- Global Filters Bar -->
+        <div class="w-full max-w-[98%] mx-auto px-2 sm:px-4 py-1.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
             <div class="flex items-center gap-2 flex-wrap">
+                <!-- Driver Filter -->
                 <div class="flex items-center bg-slate-50 border border-slate-200/80 rounded-lg p-0.5">
                     <div class="flex items-center gap-1.5 px-2 py-0.5">
                         <i class="fa-solid fa-user-circle text-slate-400"></i>
@@ -136,11 +159,12 @@
                             <option value="ALL">All Drivers &amp; Logistics</option>
                         </select>
                     </div>
-                    <button type="button" onclick="window.openAddDriverModal()" title="Add new driver / logistic partner" class="px-2 py-1 rounded bg-white hover:bg-blue-50 hover:text-blue-600 text-slate-500 border border-slate-200/60 font-semibold text-[11px] transition flex items-center gap-1 cursor-pointer">
+                    <button type="button" id="btnAddDriverHeader" onclick="window.openAddDriverModal()" title="Add new driver" class="px-2 py-1 rounded bg-white hover:bg-blue-50 hover:text-blue-600 text-slate-500 border border-slate-200/60 font-semibold text-[11px] transition items-center gap-1 cursor-pointer hidden">
                         <i class="fa-solid fa-plus text-[9px]"></i> Driver
                     </button>
                 </div>
 
+                <!-- Category Filter -->
                 <div class="flex items-center bg-slate-50 border border-slate-200/80 rounded-lg p-0.5">
                     <div class="flex items-center gap-1.5 px-2 py-0.5">
                         <i class="fa-solid fa-tag text-slate-400"></i>
@@ -148,11 +172,12 @@
                             <option value="ALL">All Categories</option>
                         </select>
                     </div>
-                    <button type="button" onclick="window.openAddCategoryModal()" title="Add new delivery type / category" class="px-2 py-1 rounded bg-white hover:bg-indigo-50 hover:text-indigo-600 text-slate-500 border border-slate-200/60 font-semibold text-[11px] transition flex items-center gap-1 cursor-pointer">
+                    <button type="button" id="btnAddCategoryHeader" onclick="window.openAddCategoryModal()" title="Add new delivery type" class="px-2 py-1 rounded bg-white hover:bg-indigo-50 hover:text-indigo-600 text-slate-500 border border-slate-200/60 font-semibold text-[11px] transition items-center gap-1 cursor-pointer hidden">
                         <i class="fa-solid fa-plus text-[9px]"></i> Type
                     </button>
                 </div>
 
+                <!-- Status Filter -->
                 <div class="flex items-center bg-slate-50 border border-slate-200/80 rounded-lg p-0.5">
                     <div class="flex items-center gap-1.5 px-2 py-0.5">
                         <i class="fa-solid fa-sliders text-slate-400"></i>
@@ -160,7 +185,7 @@
                             <option value="ALL">All Statuses</option>
                         </select>
                     </div>
-                    <button type="button" onclick="window.openAddStatusModal()" title="Add new custom status" class="px-2 py-1 rounded bg-white hover:bg-emerald-50 hover:text-emerald-600 text-slate-500 border border-slate-200/60 font-semibold text-[11px] transition flex items-center gap-1 cursor-pointer">
+                    <button type="button" id="btnAddStatusHeader" onclick="window.openAddStatusModal()" title="Add new custom status" class="px-2 py-1 rounded bg-white hover:bg-emerald-50 hover:text-emerald-600 text-slate-500 border border-slate-200/60 font-semibold text-[11px] transition items-center gap-1 cursor-pointer hidden">
                         <i class="fa-solid fa-plus text-[9px]"></i> Status
                     </button>
                 </div>
@@ -168,16 +193,48 @@
 
             <div class="flex items-center gap-3 text-slate-500 text-[11px]">
                 <div id="dynamicStatusLegend" class="hidden md:flex items-center gap-2"></div>
-                <span class="text-slate-400">|</span>
-                <span class="text-slate-400"><i class="fa-solid fa-hand-point-left mr-1"></i>Swipe L/R to navigate</span>
+                <span class="text-slate-400 hidden sm:inline">|</span>
+                <span class="text-slate-400 hidden sm:inline"><i class="fa-solid fa-circle-info mr-1"></i>Ctrl + Scroll wheel to zoom</span>
             </div>
         </div>
     </header>
 
-    <main class="flex-1 max-w-7xl w-full mx-auto p-1.5 sm:p-2 md:p-3 flex flex-col">
+    <!-- Main Calendar Area -->
+    <main class="flex-1 w-full max-w-[98%] mx-auto p-1 sm:p-2 flex flex-col">
         <div id="calendarContainer" class="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[580px]"></div>
     </main>
 
+    <!-- Password Modal for Edit Mode Unlock (Password: 2255) -->
+    <div id="passwordModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xs overflow-hidden flex flex-col">
+            <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Authentication</h3>
+                </div>
+                <button type="button" onclick="window.closePasswordModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center cursor-pointer">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+            <form id="passwordForm" class="p-4 space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Enter Edit Password <span class="text-rose-500">*</span></label>
+                    <input type="password" id="adminPasswordInput" required placeholder="Enter password" class="w-full px-3 py-2 text-xs font-semibold text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40 text-center tracking-widest">
+                    <p id="passwordErrorMsg" class="text-[11px] text-rose-500 font-semibold mt-1.5 hidden flex items-center gap-1">
+                        <i class="fa-solid fa-circle-exclamation"></i> Incorrect password. Try again.
+                    </p>
+                </div>
+                <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                    <button type="button" onclick="window.closePasswordModal()" class="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer">Cancel</button>
+                    <button type="submit" class="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl shadow-md shadow-blue-500/20 transition cursor-pointer">Unlock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Driver Modal -->
     <div id="addDriverModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
         <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden flex flex-col">
             <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
@@ -185,25 +242,26 @@
                     <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm">
                         <i class="fa-solid fa-user-plus"></i>
                     </div>
-                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Add Driver / Partner</h3>
+                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Add Driver</h3>
                 </div>
-                <button type="button" onclick="window.closeAddDriverModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center">
+                <button type="button" onclick="window.closeAddDriverModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center cursor-pointer">
                     <i class="fa-solid fa-xmark text-sm"></i>
                 </button>
             </div>
             <form id="addDriverForm" class="p-4 space-y-3">
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Driver Name / Vehicle Title <span class="text-rose-500">*</span></label>
-                    <input type="text" id="newDriverInput" required placeholder="e.g. John Doe, Van 04, Express Freight" class="w-full px-3 py-2 text-xs font-semibold text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Driver Name / Vehicle <span class="text-rose-500">*</span></label>
+                    <input type="text" id="newDriverInput" required placeholder="e.g. Tariq, Van 05" class="w-full px-3 py-2 text-xs font-semibold text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40">
                 </div>
                 <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                    <button type="button" onclick="window.closeAddDriverModal()" class="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">Cancel</button>
-                    <button type="submit" class="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl shadow-md shadow-blue-500/20 transition">Add Driver</button>
+                    <button type="button" onclick="window.closeAddDriverModal()" class="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer">Cancel</button>
+                    <button type="submit" class="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md transition cursor-pointer">Add Driver</button>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- Add Category Modal -->
     <div id="addCategoryModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
         <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden flex flex-col">
             <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
@@ -211,40 +269,38 @@
                     <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm">
                         <i class="fa-solid fa-folder-plus"></i>
                     </div>
-                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Add Delivery Type / Category</h3>
+                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Add Delivery Type</h3>
                 </div>
-                <button type="button" onclick="window.closeAddCategoryModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center">
+                <button type="button" onclick="window.closeAddCategoryModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center cursor-pointer">
                     <i class="fa-solid fa-xmark text-sm"></i>
                 </button>
             </div>
             <form id="addCategoryForm" class="p-4 space-y-3">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Type Label <span class="text-rose-500">*</span></label>
-                    <input type="text" id="newCategoryLabelInput" required placeholder="e.g. Return Inspection, Repair" class="w-full px-3 py-2 text-xs font-semibold text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
+                    <input type="text" id="newCategoryLabelInput" required placeholder="e.g. Return Inspection" class="w-full px-3 py-2 text-xs font-semibold text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Select Icon</label>
-                    <select id="newCategoryIconSelect" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
-                        <option value="fa-truck">Truck (fa-truck)</option>
-                        <option value="fa-box">Package Box (fa-box)</option>
-                        <option value="fa-boxes-stacked">Stacked Boxes (fa-boxes-stacked)</option>
-                        <option value="fa-handshake">Handshake (fa-handshake)</option>
-                        <option value="fa-warehouse">Warehouse (fa-warehouse)</option>
-                        <option value="fa-wrench">Tools (fa-wrench)</option>
-                        <option value="fa-clipboard-check">Inspection (fa-clipboard-check)</option>
-                        <option value="fa-file-export">Submission (fa-file-export)</option>
-                        <option value="fa-right-left">Pickup/Drop (fa-right-left)</option>
-                        <option value="fa-layer-group">Layers (fa-layer-group)</option>
+                    <select id="newCategoryIconSelect" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none">
+                        <option value="fa-truck">Truck</option>
+                        <option value="fa-box">Box</option>
+                        <option value="fa-boxes-stacked">Stacked Boxes</option>
+                        <option value="fa-handshake">Handshake</option>
+                        <option value="fa-warehouse">Warehouse</option>
+                        <option value="fa-wrench">Tools</option>
+                        <option value="fa-clipboard-check">Inspection</option>
                     </select>
                 </div>
                 <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                    <button type="button" onclick="window.closeAddCategoryModal()" class="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">Cancel</button>
-                    <button type="submit" class="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-xl shadow-md shadow-indigo-500/20 transition">Add Type</button>
+                    <button type="button" onclick="window.closeAddCategoryModal()" class="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer">Cancel</button>
+                    <button type="submit" class="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition cursor-pointer">Add Type</button>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- Add Status Modal -->
     <div id="addStatusModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
         <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden flex flex-col">
             <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
@@ -252,20 +308,20 @@
                     <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm">
                         <i class="fa-solid fa-circle-plus"></i>
                     </div>
-                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Add Custom Status</h3>
+                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Add Status</h3>
                 </div>
-                <button type="button" onclick="window.closeAddStatusModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center">
+                <button type="button" onclick="window.closeAddStatusModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center cursor-pointer">
                     <i class="fa-solid fa-xmark text-sm"></i>
                 </button>
             </div>
             <form id="addStatusForm" class="p-4 space-y-3">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Status Label <span class="text-rose-500">*</span></label>
-                    <input type="text" id="newStatusLabelInput" required placeholder="e.g. In Transit, Out for Delivery, On Hold" class="w-full px-3 py-2 text-xs font-semibold text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/40">
+                    <input type="text" id="newStatusLabelInput" required placeholder="e.g. In Transit" class="w-full px-3 py-2 text-xs font-semibold text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/40">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Theme Color</label>
-                    <select id="newStatusColorSelect" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/40">
+                    <select id="newStatusColorSelect" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none">
                         <option value="amber">Amber / Orange</option>
                         <option value="sky">Sky Blue</option>
                         <option value="violet">Violet / Purple</option>
@@ -274,14 +330,14 @@
                     </select>
                 </div>
                 <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                    <button type="button" onclick="window.closeAddStatusModal()" class="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">Cancel</button>
-                    <button type="submit" class="px-4 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl shadow-md shadow-emerald-500/20 transition">Add Status</button>
+                    <button type="button" onclick="window.closeAddStatusModal()" class="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer">Cancel</button>
+                    <button type="submit" class="px-4 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md transition cursor-pointer">Add Status</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Floating Popper Notifications -->
+    <!-- Notification Poppers -->
     <div id="categoryPopper" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none hidden">
         <div class="bg-slate-900/90 text-white backdrop-blur-md px-5 py-4 rounded-2xl shadow-2xl border border-slate-700/60 flex items-center gap-3 min-w-[280px]">
             <div id="categoryPopperIcon" class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-400/30 flex items-center justify-center text-lg shrink-0">
@@ -319,6 +375,7 @@
         </div>
     </div>
 
+    <!-- Driver Picker Modal -->
     <div id="driverPickerModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
         <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden flex flex-col">
             <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
@@ -331,23 +388,24 @@
                         <p id="driverPickerTaskTitle" class="text-[11px] text-slate-500 truncate max-w-[220px]"></p>
                     </div>
                 </div>
-                <button type="button" onclick="window.closeDriverPickerModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center">
+                <button type="button" onclick="window.closeDriverPickerModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center cursor-pointer">
                     <i class="fa-solid fa-xmark text-sm"></i>
                 </button>
             </div>
             <div class="p-3 max-h-72 overflow-y-auto space-y-1" id="driverRadioList"></div>
             <div class="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
-                <button type="button" onclick="window.openAddDriverModal()" class="px-2.5 py-1 text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                <button type="button" onclick="window.openAddDriverModal()" class="px-2.5 py-1 text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer">
                     <i class="fa-solid fa-plus text-[10px]"></i> New Driver
                 </button>
                 <div class="flex items-center gap-2">
-                    <button type="button" onclick="window.closeDriverPickerModal()" class="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200/70 rounded-xl transition">Cancel</button>
-                    <button type="button" id="btnConfirmDriverAssignment" class="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl shadow-md shadow-blue-500/20 transition">Confirm Driver</button>
+                    <button type="button" onclick="window.closeDriverPickerModal()" class="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200/70 rounded-xl transition cursor-pointer">Cancel</button>
+                    <button type="button" id="btnConfirmDriverAssignment" class="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl shadow-md transition cursor-pointer">Confirm</button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Category Picker Modal -->
     <div id="categoryPickerModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
         <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden flex flex-col">
             <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
@@ -356,24 +414,25 @@
                         <i class="fa-solid fa-tags"></i>
                     </div>
                     <div>
-                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Select Category Type</h3>
+                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Select Category</h3>
                         <p id="categoryPickerTaskTitle" class="text-[11px] text-slate-500 truncate max-w-[220px]"></p>
                     </div>
                 </div>
-                <button type="button" onclick="window.closeCategoryPickerModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center">
+                <button type="button" onclick="window.closeCategoryPickerModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center cursor-pointer">
                     <i class="fa-solid fa-xmark text-sm"></i>
                 </button>
             </div>
             <div class="p-3 space-y-1.5 max-h-72 overflow-y-auto" id="categorySelectionContainer"></div>
             <div class="p-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                <button type="button" onclick="window.openAddCategoryModal()" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
-                    <i class="fa-solid fa-plus text-[10px]"></i> Add New Type
+                <button type="button" onclick="window.openAddCategoryModal()" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 cursor-pointer">
+                    <i class="fa-solid fa-plus text-[10px]"></i> Add Type
                 </button>
-                <button type="button" onclick="window.closeCategoryPickerModal()" class="text-xs font-medium text-slate-500 hover:text-slate-700">Close</button>
+                <button type="button" onclick="window.closeCategoryPickerModal()" class="text-xs font-medium text-slate-500 hover:text-slate-700 cursor-pointer">Close</button>
             </div>
         </div>
     </div>
 
+    <!-- Status & Postpone Picker Modal -->
     <div id="statusPickerModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
         <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
             <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
@@ -386,22 +445,20 @@
                         <p id="statusPickerTaskTitle" class="text-[11px] text-slate-500 truncate max-w-[240px]"></p>
                     </div>
                 </div>
-                <button type="button" id="btnCloseStatusModal" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center">
+                <button type="button" id="btnCloseStatusModal" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center cursor-pointer">
                     <i class="fa-solid fa-xmark text-sm"></i>
                 </button>
             </div>
-            
             <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div class="space-y-1.5 flex flex-col justify-between">
                     <div>
                         <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Change Status</p>
                         <div id="statusPickerOptionsContainer" class="space-y-1.5 max-h-56 overflow-y-auto"></div>
                     </div>
-                    <button type="button" onclick="window.openAddStatusModal()" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 pt-2">
+                    <button type="button" onclick="window.openAddStatusModal()" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 pt-2 cursor-pointer">
                         <i class="fa-solid fa-plus text-[10px]"></i> Add Status
                     </button>
                 </div>
-
                 <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col justify-between">
                     <div>
                         <div class="flex items-center gap-1.5 text-purple-700 font-bold text-xs mb-1">
@@ -410,15 +467,13 @@
                         </div>
                         <p class="text-[11px] text-slate-500 mb-2">Select new scheduled date:</p>
                         <input type="date" id="postponeDateInput" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/40 mb-2">
-                        
                         <div class="flex items-center gap-1">
-                            <button type="button" onclick="window.quickShiftPostpone(1)" class="flex-1 py-1 rounded bg-white hover:bg-purple-50 text-[10px] font-semibold text-purple-700 border border-purple-200 transition">+1 Day</button>
-                            <button type="button" onclick="window.quickShiftPostpone(2)" class="flex-1 py-1 rounded bg-white hover:bg-purple-50 text-[10px] font-semibold text-purple-700 border border-purple-200 transition">+2 Days</button>
-                            <button type="button" onclick="window.quickShiftPostpone(7)" class="flex-1 py-1 rounded bg-white hover:bg-purple-50 text-[10px] font-semibold text-purple-700 border border-purple-200 transition">+1 Wk</button>
+                            <button type="button" onclick="window.quickShiftPostpone(1)" class="flex-1 py-1 rounded bg-white hover:bg-purple-50 text-[10px] font-semibold text-purple-700 border border-purple-200 transition cursor-pointer">+1 Day</button>
+                            <button type="button" onclick="window.quickShiftPostpone(2)" class="flex-1 py-1 rounded bg-white hover:bg-purple-50 text-[10px] font-semibold text-purple-700 border border-purple-200 transition cursor-pointer">+2 Days</button>
+                            <button type="button" onclick="window.quickShiftPostpone(7)" class="flex-1 py-1 rounded bg-white hover:bg-purple-50 text-[10px] font-semibold text-purple-700 border border-purple-200 transition cursor-pointer">+1 Wk</button>
                         </div>
                     </div>
-
-                    <button type="button" onclick="window.applyPostponeDate()" class="w-full mt-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs transition shadow-sm">
+                    <button type="button" onclick="window.applyPostponeDate()" class="w-full mt-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs transition shadow-sm cursor-pointer">
                         Confirm Postpone
                     </button>
                 </div>
@@ -426,17 +481,18 @@
         </div>
     </div>
 
+    <!-- Quick Details Modal -->
     <div id="quickDetailsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
         <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
             <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
                 <div class="flex items-center gap-2">
                     <span id="quickDetailsDot" class="w-3 h-3 rounded-full bg-rose-500 ring-2 ring-white shrink-0 shadow-xs"></span>
                     <div>
-                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Specifications &amp; Details</h3>
+                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Specifications</h3>
                         <p id="quickDetailsDeliveryTitle" class="text-[11px] text-slate-500 truncate max-w-[240px]"></p>
                     </div>
                 </div>
-                <button type="button" onclick="window.closeQuickDetailsModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center">
+                <button type="button" onclick="window.closeQuickDetailsModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center cursor-pointer">
                     <i class="fa-solid fa-xmark text-sm"></i>
                 </button>
             </div>
@@ -445,17 +501,15 @@
                     <span id="quickDetailsStatusBadge" class="px-2 py-0.5 rounded-md font-semibold text-[10px]"></span>
                     <span id="quickDetailsDate" class="font-medium text-slate-700"></span>
                 </div>
-
                 <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 min-h-[90px] text-xs text-slate-800 whitespace-pre-wrap leading-relaxed">
                     <div id="quickDetailsContent"></div>
                 </div>
-
                 <div class="flex items-center justify-between pt-1 border-t border-slate-100">
-                    <button type="button" id="btnEditFromQuickDetails" class="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1.5">
+                    <button type="button" id="btnEditFromQuickDetails" class="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 cursor-pointer">
                         <i class="fa-solid fa-pen text-[11px]"></i>
                         <span>Edit Details</span>
                     </button>
-                    <button type="button" onclick="window.closeQuickDetailsModal()" class="px-4 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200/80 rounded-xl transition">
+                    <button type="button" onclick="window.closeQuickDetailsModal()" class="px-4 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer">
                         Done
                     </button>
                 </div>
@@ -463,6 +517,7 @@
         </div>
     </div>
 
+    <!-- Attachment Viewer Modal -->
     <div id="attachmentViewerModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
         <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
             <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
@@ -475,7 +530,7 @@
                         <p id="attachmentModalDeliveryTitle" class="text-[11px] text-slate-500 truncate max-w-[240px]"></p>
                     </div>
                 </div>
-                <button type="button" onclick="window.closeAttachmentModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center">
+                <button type="button" onclick="window.closeAttachmentModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center cursor-pointer">
                     <i class="fa-solid fa-xmark text-sm"></i>
                 </button>
             </div>
@@ -492,38 +547,38 @@
                     </div>
                     <span class="px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[10px] font-semibold uppercase shrink-0">Attached</span>
                 </div>
-
                 <div class="h-44 rounded-xl border border-slate-200 bg-white p-4 flex flex-col items-center justify-center text-center shadow-inner relative overflow-hidden">
                     <i class="fa-regular fa-file-lines text-4xl text-slate-300 mb-2"></i>
                     <p class="text-xs font-semibold text-slate-700">Document Ready for Review</p>
-                    <p class="text-[11px] text-slate-400 max-w-xs mt-0.5">Airway bill, delivery dispatch note &amp; customer acknowledgment slip.</p>
+                    <p class="text-[11px] text-slate-400 max-w-xs mt-0.5">Airway bill &amp; delivery acknowledgment slip.</p>
                 </div>
-
                 <div class="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
-                    <button type="button" onclick="window.closeAttachmentModal()" class="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">Close</button>
-                    <button type="button" onclick="window.downloadSimulatedAttachment()" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl shadow-md shadow-blue-500/20 transition flex items-center gap-1.5">
+                    <button type="button" onclick="window.closeAttachmentModal()" class="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer">Close</button>
+                    <button type="button" onclick="window.downloadSimulatedAttachment()" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer">
                         <i class="fa-solid fa-download text-xs"></i>
-                        <span>Download File</span>
+                        <span>Download</span>
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Delete Confirm Modal -->
     <div id="deleteConfirmModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
         <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden p-5 text-center">
             <div class="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center text-lg mx-auto mb-3">
                 <i class="fa-solid fa-triangle-exclamation"></i>
             </div>
             <h3 class="text-sm font-bold text-slate-800 mb-1">Delete Delivery Schedule?</h3>
-            <p class="text-xs text-slate-500 mb-5">This action cannot be undone. The task will be permanently removed from all calendar views.</p>
+            <p class="text-xs text-slate-500 mb-5">This action cannot be undone.</p>
             <div class="flex items-center justify-center gap-2">
-                <button type="button" id="btnCancelDelete" class="w-1/2 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">Keep Task</button>
-                <button type="button" id="btnConfirmDelete" class="w-1/2 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 active:bg-rose-800 rounded-xl shadow-md shadow-rose-500/20 transition">Delete</button>
+                <button type="button" id="btnCancelDelete" class="w-1/2 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer">Keep Task</button>
+                <button type="button" id="btnConfirmDelete" class="w-1/2 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 active:bg-rose-800 rounded-xl shadow-md transition cursor-pointer">Delete</button>
             </div>
         </div>
     </div>
 
+    <!-- View Modal -->
     <div id="viewModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
         <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
             <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
@@ -531,7 +586,7 @@
                     <span id="viewDetailDot" class="w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white shrink-0"></span>
                     <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Schedule Details</h3>
                 </div>
-                <button type="button" onclick="window.closeViewModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center">
+                <button type="button" onclick="window.closeViewModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center cursor-pointer">
                     <i class="fa-solid fa-xmark text-sm"></i>
                 </button>
             </div>
@@ -558,12 +613,10 @@
                         <div id="viewStatusContainer" class="mt-0.5"></div>
                     </div>
                 </div>
-
                 <div class="pt-2 border-t border-slate-100">
                     <span class="text-[10px] uppercase font-bold text-slate-400">Specifications &amp; Notes</span>
                     <div id="viewDetails" class="mt-1 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 whitespace-pre-wrap min-h-[50px]"></div>
                 </div>
-
                 <div id="viewAttachmentSection" class="pt-2 border-t border-slate-100 hidden">
                     <span class="text-[10px] uppercase font-bold text-slate-400">Attachment</span>
                     <div class="mt-1 p-2.5 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
@@ -571,24 +624,24 @@
                             <i class="fa-solid fa-paperclip text-slate-400"></i>
                             <span id="viewAttachmentName" class="text-xs font-semibold text-slate-700 truncate"></span>
                         </div>
-                        <button type="button" onclick="window.downloadSimulatedAttachment()" class="text-xs font-semibold text-blue-600 hover:text-blue-700">Download</button>
+                        <button type="button" onclick="window.downloadSimulatedAttachment()" class="text-xs font-semibold text-blue-600 hover:text-blue-700 cursor-pointer">Download</button>
                     </div>
                 </div>
-
                 <div class="flex items-center justify-between pt-3 border-t border-slate-100">
-                    <button type="button" id="btnDeleteFromView" class="text-xs font-semibold text-rose-600 hover:text-rose-700 flex items-center gap-1.5">
+                    <button type="button" id="btnDeleteFromView" class="text-xs font-semibold text-rose-600 hover:text-rose-700 flex items-center gap-1.5 cursor-pointer">
                         <i class="fa-regular fa-trash-can text-xs"></i>
                         <span>Delete</span>
                     </button>
                     <div class="flex items-center gap-2">
-                        <button type="button" onclick="window.closeViewModal()" class="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">Close</button>
-                        <button type="button" id="btnEditFromView" class="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition">Edit Schedule</button>
+                        <button type="button" onclick="window.closeViewModal()" class="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer">Close</button>
+                        <button type="button" id="btnEditFromView" class="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition cursor-pointer">Edit</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Edit Modal -->
     <div id="editModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
         <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col">
             <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
@@ -598,29 +651,26 @@
                     </div>
                     <h3 class="text-sm font-bold text-slate-800">Edit Delivery Schedule</h3>
                 </div>
-                <button type="button" onclick="window.closeEditModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center">
+                <button type="button" onclick="window.closeEditModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center cursor-pointer">
                     <i class="fa-solid fa-xmark text-sm"></i>
                 </button>
             </div>
             <form id="editDeliveryForm" class="p-5 space-y-3.5 overflow-y-auto max-h-[80vh]">
                 <input type="hidden" id="editDeliveryId">
-
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Task Name / Title <span class="text-rose-500">*</span></label>
                     <input type="text" id="editTitle" required class="w-full px-3 py-2 text-xs font-semibold text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40">
                 </div>
-
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Scheduled Date <span class="text-rose-500">*</span></label>
                         <input type="date" id="editDate" required class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Driver / Logistics <span class="text-rose-500">*</span></label>
+                        <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Driver / Logistics</label>
                         <select id="editDriver" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40"></select>
                     </div>
                 </div>
-
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Category Type</label>
@@ -631,17 +681,14 @@
                         <select id="editStatus" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40"></select>
                     </div>
                 </div>
-
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Message Note <span class="text-[10px] text-slate-400 font-normal">(Visible under title)</span></label>
-                    <input type="text" id="editMessage" placeholder="e.g. Call client 30 mins before arrival" class="w-full px-3 py-2 text-xs text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+                    <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Message Note</label>
+                    <input type="text" id="editMessage" placeholder="e.g. Call client 30 mins before arrival" class="w-full px-3 py-2 text-xs text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none">
                 </div>
-
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Details &amp; Specifications <span class="text-[10px] text-slate-400 font-normal">(Drag corner to expand)</span></label>
-                    <textarea id="editDetails" rows="3" placeholder="Enter private site instructions, security gate pass codes, recipient info..." class="w-full px-3 py-2 text-xs text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-y min-h-[75px]"></textarea>
+                    <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Details &amp; Specifications</label>
+                    <textarea id="editDetails" rows="3" placeholder="Enter private site instructions, security gate pass codes..." class="w-full px-3 py-2 text-xs text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none resize-y min-h-[75px]"></textarea>
                 </div>
-
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Attachment</label>
                     <div class="flex items-center gap-2">
@@ -653,21 +700,21 @@
                         <div id="editAttachmentPreview" class="flex-1 truncate text-xs text-slate-500"></div>
                     </div>
                 </div>
-
                 <div class="flex items-center justify-between pt-3 border-t border-slate-100">
-                    <button type="button" id="btnDeleteFromEdit" class="text-xs font-semibold text-rose-600 hover:text-rose-700 flex items-center gap-1.5">
+                    <button type="button" id="btnDeleteFromEdit" class="text-xs font-semibold text-rose-600 hover:text-rose-700 flex items-center gap-1.5 cursor-pointer">
                         <i class="fa-regular fa-trash-can text-xs"></i>
                         <span>Delete</span>
                     </button>
                     <div class="flex items-center gap-2">
-                        <button type="button" onclick="window.closeEditModal()" class="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">Cancel</button>
-                        <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl shadow-md shadow-blue-500/20 transition">Save Changes</button>
+                        <button type="button" onclick="window.closeEditModal()" class="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer">Cancel</button>
+                        <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl shadow-md transition cursor-pointer">Save Changes</button>
                     </div>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- Create Modal -->
     <div id="createModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 hidden">
         <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col">
             <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
@@ -677,7 +724,7 @@
                     </div>
                     <h3 class="text-sm font-bold text-slate-800">Schedule Delivery Task</h3>
                 </div>
-                <button type="button" onclick="window.closeCreateModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center">
+                <button type="button" onclick="window.closeCreateModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center cursor-pointer">
                     <i class="fa-solid fa-xmark text-sm"></i>
                 </button>
             </div>
@@ -686,7 +733,6 @@
                     <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Task Name / Title <span class="text-rose-500">*</span></label>
                     <input type="text" id="createTitle" required placeholder="e.g. Deliver 12x Solar Panels to Warehouse B" class="w-full px-3 py-2 text-xs font-semibold text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40">
                 </div>
-
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Scheduled Date <span class="text-rose-500">*</span></label>
@@ -694,33 +740,29 @@
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Driver / Logistics</label>
-                        <select id="createDriver" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+                        <select id="createDriver" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none">
                             <option value=""></option>
                         </select>
                     </div>
                 </div>
-
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Category Type</label>
-                        <select id="createType" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40"></select>
+                        <select id="createType" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none"></select>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Status</label>
-                        <select id="createStatus" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40"></select>
+                        <select id="createStatus" class="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none"></select>
                     </div>
                 </div>
-
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Message Note <span class="text-[10px] text-slate-400 font-normal">(Visible on card)</span></label>
-                    <input type="text" id="createMessage" placeholder="e.g. Call client upon dispatch" class="w-full px-3 py-2 text-xs text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+                    <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Message Note</label>
+                    <input type="text" id="createMessage" placeholder="e.g. Call client upon dispatch" class="w-full px-3 py-2 text-xs text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none">
                 </div>
-
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Details &amp; Specifications <span class="text-[10px] text-slate-400 font-normal">(Drag corner to expand)</span></label>
-                    <textarea id="createDetails" rows="3" placeholder="Enter private site instructions, security gate pass codes, recipient info..." class="w-full px-3 py-2 text-xs text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-y min-h-[75px]"></textarea>
+                    <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Details &amp; Specifications</label>
+                    <textarea id="createDetails" rows="3" placeholder="Enter private site instructions, security gate pass codes..." class="w-full px-3 py-2 text-xs text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none resize-y min-h-[75px]"></textarea>
                 </div>
-
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Attachment</label>
                     <div class="flex items-center gap-2">
@@ -732,10 +774,9 @@
                         <div id="createAttachmentPreview" class="flex-1 truncate text-xs text-slate-500"></div>
                     </div>
                 </div>
-
                 <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-                    <button type="button" onclick="window.closeCreateModal()" class="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">Cancel</button>
-                    <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl shadow-md shadow-blue-500/20 transition">Schedule Delivery</button>
+                    <button type="button" onclick="window.closeCreateModal()" class="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer">Cancel</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl shadow-md transition cursor-pointer">Schedule Delivery</button>
                 </div>
             </form>
         </div>
@@ -762,20 +803,20 @@
             'Osman', 'Hamad Ali', 'Awais', 'Outside Vehicle', 'Cust. Collection', 'Courier'
         ];
 
-        // Unique very light pastel colors for each driver
+        // High-contrast pastel color palette mapped to drivers
         const DRIVER_PALETTE = [
-            { bg: 'bg-sky-50', hover: 'hover:bg-sky-100', dot: 'bg-sky-500', border: 'border-sky-300' },
-            { bg: 'bg-emerald-50', hover: 'hover:bg-emerald-100', dot: 'bg-emerald-500', border: 'border-emerald-300' },
-            { bg: 'bg-amber-50', hover: 'hover:bg-amber-100', dot: 'bg-amber-500', border: 'border-amber-300' },
-            { bg: 'bg-purple-50', hover: 'hover:bg-purple-100', dot: 'bg-purple-500', border: 'border-purple-300' },
-            { bg: 'bg-cyan-50', hover: 'hover:bg-cyan-100', dot: 'bg-cyan-500', border: 'border-cyan-300' },
-            { bg: 'bg-orange-50', hover: 'hover:bg-orange-100', dot: 'bg-orange-500', border: 'border-orange-300' },
-            { bg: 'bg-teal-50', hover: 'hover:bg-teal-100', dot: 'bg-teal-500', border: 'border-teal-300' },
-            { bg: 'bg-indigo-50', hover: 'hover:bg-indigo-100', dot: 'bg-indigo-500', border: 'border-indigo-300' },
-            { bg: 'bg-rose-50', hover: 'hover:bg-rose-100', dot: 'bg-rose-500', border: 'border-rose-300' },
-            { bg: 'bg-lime-50', hover: 'hover:bg-lime-100', dot: 'bg-lime-500', border: 'border-lime-300' },
-            { bg: 'bg-violet-50', hover: 'hover:bg-violet-100', dot: 'bg-violet-500', border: 'border-violet-300' },
-            { bg: 'bg-fuchsia-50', hover: 'hover:bg-fuchsia-100', dot: 'bg-fuchsia-500', border: 'border-fuchsia-300' }
+            { bg: 'bg-amber-100/90', hover: 'hover:bg-amber-200/90', dot: 'bg-amber-600', border: 'border-amber-400' },
+            { bg: 'bg-sky-100/90', hover: 'hover:bg-sky-200/90', dot: 'bg-sky-600', border: 'border-sky-400' },
+            { bg: 'bg-emerald-100/90', hover: 'hover:bg-emerald-200/90', dot: 'bg-emerald-600', border: 'border-emerald-400' },
+            { bg: 'bg-purple-100/90', hover: 'hover:bg-purple-200/90', dot: 'bg-purple-600', border: 'border-purple-400' },
+            { bg: 'bg-orange-100/90', hover: 'hover:bg-orange-200/90', dot: 'bg-orange-600', border: 'border-orange-400' },
+            { bg: 'bg-teal-100/90', hover: 'hover:bg-teal-200/90', dot: 'bg-teal-600', border: 'border-teal-400' },
+            { bg: 'bg-rose-100/90', hover: 'hover:bg-rose-200/90', dot: 'bg-rose-600', border: 'border-rose-400' },
+            { bg: 'bg-lime-100/90', hover: 'hover:bg-lime-200/90', dot: 'bg-lime-600', border: 'border-lime-400' },
+            { bg: 'bg-violet-100/90', hover: 'hover:bg-violet-200/90', dot: 'bg-violet-600', border: 'border-violet-400' },
+            { bg: 'bg-cyan-100/90', hover: 'hover:bg-cyan-200/90', dot: 'bg-cyan-600', border: 'border-cyan-400' },
+            { bg: 'bg-pink-100/90', hover: 'hover:bg-pink-200/90', dot: 'bg-pink-600', border: 'border-pink-400' },
+            { bg: 'bg-indigo-100/90', hover: 'hover:bg-indigo-200/90', dot: 'bg-indigo-600', border: 'border-indigo-400' }
         ];
 
         function getDriverColor(driverName) {
@@ -787,16 +828,13 @@
             if (index !== -1) {
                 return DRIVER_PALETTE[index % DRIVER_PALETTE.length];
             }
-            // Deterministic hash for any newly added custom driver
             let hash = 0;
             for (let i = 0; i < name.length; i++) {
                 hash = name.charCodeAt(i) + ((hash << 5) - hash);
             }
-            const colorIndex = Math.abs(hash) % DRIVER_PALETTE.length;
-            return DRIVER_PALETTE[colorIndex];
+            return DRIVER_PALETTE[Math.abs(hash) % DRIVER_PALETTE.length];
         }
 
-        // Specific category mappings with updated labels
         let categoryMap = {
             TODO: { label: 'Todo', icon: 'fa-list-check', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
             DELIVERY: { label: 'Delivery', icon: 'fa-truck', bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
@@ -808,7 +846,6 @@
             OTHER: { label: 'Other', icon: 'fa-layer-group', bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-300' }
         };
 
-        // Specific status mappings: Todo, Delivered, Cancelled
         let statusMap = {
             TO_DO: { label: 'Todo', dot: 'bg-blue-500', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', sortRank: 1 },
             DELIVERED: { label: 'Delivered', dot: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', sortRank: 2 },
@@ -864,6 +901,7 @@
             createAttachment: null,
             editAttachment: null,
             expandedDoneDates: new Set(),
+            isEditMode: false,
             deliveries: []
         };
 
@@ -908,9 +946,6 @@
 
         function sortDayDeliveries(list) {
             return list.slice().sort((a, b) => {
-                // Tier 0: Active tasks (come first)
-                // Tier 1: Delivered tasks (go towards bottom)
-                // Tier 2: Cancelled tasks (go at the very end)
                 const getTier = (status) => {
                     if (status === 'DELIVERED') return 1;
                     if (status === 'CANCELLED') return 2;
@@ -923,18 +958,15 @@
                     return tierA - tierB;
                 }
 
-                // Within the same tier, sort and group by Driver name
                 const driverA = (a.driver || '').trim().toLowerCase();
                 const driverB = (b.driver || '').trim().toLowerCase();
 
-                // Put unassigned drivers at the end of the active group
                 if (driverA && !driverB) return -1;
                 if (!driverA && driverB) return 1;
                 if (driverA !== driverB) {
                     return driverA.localeCompare(driverB);
                 }
 
-                // If same driver, sort alphabetically by title
                 return (a.title || '').localeCompare(b.title || '');
             });
         }
@@ -943,7 +975,6 @@
             const hasDetails = Boolean(item.details && item.details.trim().length > 0);
             const isCancelled = item.status === 'CANCELLED';
             const isDelivered = item.status === 'DELIVERED';
-
             const titleClasses = isCancelled ? 'font-medium text-slate-400 line-through' : 'font-bold text-slate-900';
 
             const dColor = getDriverColor(item.driver);
@@ -958,84 +989,98 @@
             const stat = statusMap[item.status] || { label: item.status, dot: 'bg-slate-400', bg: 'bg-white/90', text: 'text-slate-800', border: 'border-slate-300' };
 
             const attachmentIcon = item.attachment
-                ? `<button type="button" title="Attachment: ${escapeHtml(item.attachment.name)} (Click to view)" onclick="window.showAttachmentModal('${item.id}', event)" class="w-4 h-4 rounded hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-blue-600 shrink-0 text-[8px] transition cursor-pointer"><i class="fa-solid fa-paperclip"></i></button>`
+                ? `<button type="button" title="Attachment: ${escapeHtml(item.attachment.name)}" onclick="window.showAttachmentModal('${item.id}', event)" class="w-4 h-4 rounded hover:bg-white/60 flex items-center justify-center text-slate-600 hover:text-blue-600 shrink-0 text-[8px] transition cursor-pointer"><i class="fa-solid fa-paperclip"></i></button>`
                 : '';
 
             const dotIndicator = `
-                <button type="button" title="${hasDetails ? 'Click to view private details' : 'No details recorded (Click to add)'}" onclick="window.showQuickDetailsModal('${item.id}', event)" class="p-0.5 rounded-full hover:ring-1 hover:ring-slate-300 flex items-center justify-center cursor-pointer transition shrink-0">
+                <button type="button" title="${hasDetails ? 'Click to view private details' : 'No details recorded'}" onclick="window.showQuickDetailsModal('${item.id}', event)" class="p-0.5 rounded-full hover:ring-1 hover:ring-slate-300 flex items-center justify-center cursor-pointer transition shrink-0">
                     <span class="w-1.5 h-1.5 rounded-full ${hasDetails ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'} ring-1 ring-white shrink-0 shadow-xs"></span>
                 </button>
             `;
 
+            const isEditable = state.isEditMode;
+
+            const actionIcons = isEditable ? `
+                <button type="button" title="Edit schedule details" onclick="window.openEditModal('${item.id}', event)" class="w-4 h-4 rounded hover:bg-white/60 text-slate-600 hover:text-blue-700 flex items-center justify-center transition cursor-pointer">
+                    <i class="fa-solid fa-sliders text-[7.5px]"></i>
+                </button>
+                <button type="button" title="Delete schedule" onclick="window.showDeleteConfirmDialog('${item.id}', event)" class="w-4 h-4 rounded hover:bg-white/60 text-slate-600 hover:text-rose-700 flex items-center justify-center transition cursor-pointer">
+                    <i class="fa-regular fa-trash-can text-[8px]"></i>
+                </button>
+            ` : '';
+
+            const titleBlock = isEditable ? `
+                <div id="title-disp-${item.id}" onclick="window.startInlineTitleEdit('${item.id}', event)" title="Click directly to edit title" class="cursor-text group/title rounded px-1 -mx-0.5 py-0 hover:bg-black/5 border border-transparent hover:border-blue-400 transition-all flex items-center justify-between gap-1">
+                    <h4 class="text-[10px] sm:text-[10.5px] leading-tight break-words line-clamp-2 flex-1 ${titleClasses}">${escapeHtml(item.title)}</h4>
+                    <i class="fa-solid fa-pen text-[6.5px] text-slate-400 group-hover/title:text-blue-600 opacity-0 group-hover/title:opacity-100 shrink-0 transition"></i>
+                </div>
+                <div id="title-edit-box-${item.id}" class="hidden my-0.5">
+                    <input type="text" id="title-input-${item.id}"
+                        value="${escapeHtml(item.title)}"
+                        onkeydown="window.handleTitleKey(event, '${item.id}')"
+                        onblur="window.saveInlineTitle('${item.id}')"
+                        class="w-full text-[10px] font-semibold text-slate-900 bg-white border border-blue-500 rounded px-1 py-0.5 shadow-xs focus:outline-none ring-1 ring-blue-100">
+                </div>
+            ` : `
+                <div class="px-1 py-0">
+                    <h4 class="text-[10px] sm:text-[10.5px] leading-tight break-words line-clamp-2 ${titleClasses}">${escapeHtml(item.title)}</h4>
+                </div>
+            `;
+
+            const messageBlock = isEditable ? `
+                <div class="w-full" onclick="event.stopPropagation()">
+                    <div id="msg-disp-${item.id}" onclick="window.startInlineMessageEdit('${item.id}', event)" title="Click directly to edit note" class="cursor-text group/msg rounded px-1 -mx-0.5 py-0 hover:bg-black/5 border border-transparent hover:border-blue-400 transition-all flex items-center justify-between gap-1">
+                        <p class="text-[9px] text-slate-700 font-medium leading-tight truncate flex-1 ${isCancelled ? 'line-through text-slate-400' : ''}">
+                            ${item.message && item.message.trim().length > 0 ? escapeHtml(item.message) : '<span class="italic text-slate-400 font-normal text-[8.5px] opacity-70 group-hover:opacity-100">+ Note</span>'}
+                        </p>
+                        <i class="fa-solid fa-pen text-[6px] text-slate-400 group-hover/msg:text-blue-600 opacity-0 group-hover/msg:opacity-100 shrink-0 transition"></i>
+                    </div>
+                    <div id="msg-edit-box-${item.id}" class="hidden my-0.5">
+                        <input type="text" id="msg-input-${item.id}"
+                            placeholder="Add card note..."
+                            value="${escapeHtml(item.message || '')}"
+                            onkeydown="window.handleMessageKey(event, '${item.id}')"
+                            onblur="window.saveInlineMessage('${item.id}')"
+                            class="w-full text-[9px] font-normal text-slate-800 bg-white border border-blue-500 rounded px-1 py-0.5 shadow-xs focus:outline-none ring-1 ring-blue-100">
+                    </div>
+                </div>
+            ` : (item.message && item.message.trim().length > 0 ? `
+                <div class="w-full px-1">
+                    <p class="text-[9px] text-slate-700 font-medium leading-tight truncate ${isCancelled ? 'line-through text-slate-400' : ''}">
+                        ${escapeHtml(item.message)}
+                    </p>
+                </div>
+            ` : '');
+
+            const driverBadge = isEditable
+                ? `<button type="button" title="Click to assign driver" onclick="window.openDriverPickerModal('${item.id}', event)" class="h-4 inline-flex items-center gap-0.5 px-1.5 rounded bg-white/90 hover:bg-white text-slate-900 font-bold transition whitespace-nowrap border border-black/15 shadow-2xs cursor-pointer text-[8.5px] shrink-0"><span class="w-1.5 h-1.5 rounded-full ${dColor.dot} shrink-0"></span><span>${escapeHtml(item.driver || 'Driver')}</span></button>`
+                : `<div class="h-4 inline-flex items-center gap-0.5 px-1.5 rounded bg-white/90 text-slate-900 font-bold whitespace-nowrap border border-black/15 text-[8.5px] shrink-0 select-none"><span class="w-1.5 h-1.5 rounded-full ${dColor.dot} shrink-0"></span><span>${escapeHtml(item.driver || 'Driver')}</span></div>`;
+
+            const categoryBadge = isEditable
+                ? `<button type="button" title="Click to change category" onclick="window.openCategoryPicker('${item.id}', event)" class="h-4 inline-flex items-center gap-0.5 px-1 rounded text-[8.5px] font-semibold border ${cat.bg} ${cat.text} ${cat.border} hover:opacity-85 transition whitespace-nowrap cursor-pointer flex-1 min-w-0"><i class="fa-solid ${cat.icon} text-[7px] shrink-0"></i><span class="truncate">${cat.label}</span></button>`
+                : `<div class="h-4 inline-flex items-center gap-0.5 px-1 rounded text-[8.5px] font-semibold border ${cat.bg} ${cat.text} ${cat.border} whitespace-nowrap flex-1 min-w-0 select-none"><i class="fa-solid ${cat.icon} text-[7px] shrink-0"></i><span class="truncate">${cat.label}</span></div>`;
+
+            const statusBadge = isEditable
+                ? `<button type="button" title="Click to update status or postpone" onclick="window.openStatusModal('${item.id}', event)" class="h-4 inline-flex items-center gap-0.5 px-1 rounded text-[7.5px] font-semibold border ${stat.bg} ${stat.text} ${stat.border} hover:opacity-85 transition whitespace-nowrap cursor-pointer shrink-0"><span class="w-1.5 h-1.5 rounded-full ${stat.dot} shrink-0"></span><span>${stat.label}</span></button>`
+                : `<div class="h-4 inline-flex items-center gap-0.5 px-1 rounded text-[7.5px] font-semibold border ${stat.bg} ${stat.text} ${stat.border} whitespace-nowrap shrink-0 select-none"><span class="w-1.5 h-1.5 rounded-full ${stat.dot} shrink-0"></span><span>${stat.label}</span></div>`;
+
             return `
-                <div id="card-${item.id}" draggable="true" data-id="${item.id}" onclick="window.openViewModal('${item.id}')" class="group relative ${cardBg} border border-black rounded-md p-1 shadow-xs hover:shadow transition-all cursor-pointer flex flex-col gap-0.5 select-none">
-                    <!-- Top Row: Inline Title + Quick Action Icons -->
+                <div id="card-${item.id}" draggable="${isEditable ? 'true' : 'false'}" data-id="${item.id}" onclick="window.openViewModal('${item.id}')" class="group relative ${cardBg} border border-black rounded-md p-1 shadow-xs hover:shadow transition-all cursor-pointer flex flex-col gap-0.5 select-none">
                     <div class="flex items-start justify-between gap-1 w-full" onclick="event.stopPropagation()">
                         <div class="flex-1 min-w-0">
-                            <!-- Direct Click-To-Edit Title -->
-                            <div id="title-disp-${item.id}" onclick="window.startInlineTitleEdit('${item.id}', event)" title="Click directly to edit title" class="cursor-text group/title rounded px-1 -mx-0.5 py-0 hover:bg-black/5 border border-transparent hover:border-blue-400 transition-all flex items-center justify-between gap-1">
-                                <h4 class="text-[10px] sm:text-[10.5px] leading-tight break-words line-clamp-2 flex-1 ${titleClasses}">${escapeHtml(item.title)}</h4>
-                                <i class="fa-solid fa-pen text-[6.5px] text-slate-400 group-hover/title:text-blue-600 opacity-0 group-hover/title:opacity-100 shrink-0 transition"></i>
-                            </div>
-                            <div id="title-edit-box-${item.id}" class="hidden my-0.5">
-                                <input type="text" id="title-input-${item.id}"
-                                    value="${escapeHtml(item.title)}"
-                                    onkeydown="window.handleTitleKey(event, '${item.id}')"
-                                    onblur="window.saveInlineTitle('${item.id}')"
-                                    class="w-full text-[10px] font-semibold text-slate-900 bg-white border border-blue-500 rounded px-1 py-0.5 shadow-xs focus:outline-none ring-1 ring-blue-100">
-                            </div>
+                            ${titleBlock}
                         </div>
-
-                        <!-- Top-Right Compact Action Icons -->
                         <div class="flex items-center gap-0.5 shrink-0 pt-0.5">
                             ${attachmentIcon}
                             ${dotIndicator}
-                            <button type="button" title="Edit schedule details" onclick="window.openEditModal('${item.id}', event)" class="w-4 h-4 rounded hover:bg-white/60 text-slate-600 hover:text-blue-700 flex items-center justify-center transition">
-                                <i class="fa-solid fa-sliders text-[7.5px]"></i>
-                            </button>
-                            <button type="button" title="Delete schedule" onclick="window.showDeleteConfirmDialog('${item.id}', event)" class="w-4 h-4 rounded hover:bg-white/60 text-slate-600 hover:text-rose-700 flex items-center justify-center transition">
-                                <i class="fa-regular fa-trash-can text-[8px]"></i>
-                            </button>
+                            ${actionIcons}
                         </div>
                     </div>
-
-                    <!-- Direct Click-To-Edit Message Note (Ultra-compact) -->
-                    <div class="w-full" onclick="event.stopPropagation()">
-                        <div id="msg-disp-${item.id}" onclick="window.startInlineMessageEdit('${item.id}', event)" title="Click directly to edit note" class="cursor-text group/msg rounded px-1 -mx-0.5 py-0 hover:bg-black/5 border border-transparent hover:border-blue-400 transition-all flex items-center justify-between gap-1">
-                            <p class="text-[9px] text-slate-700 font-medium leading-tight truncate flex-1 ${isCancelled ? 'line-through text-slate-400' : ''}">
-                                ${item.message && item.message.trim().length > 0 ? escapeHtml(item.message) : '<span class="italic text-slate-400 font-normal text-[8.5px] opacity-70 group-hover:opacity-100">+ Note</span>'}
-                            </p>
-                            <i class="fa-solid fa-pen text-[6px] text-slate-400 group-hover/msg:text-blue-600 opacity-0 group-hover/msg:opacity-100 shrink-0 transition"></i>
-                        </div>
-                        <div id="msg-edit-box-${item.id}" class="hidden my-0.5">
-                            <input type="text" id="msg-input-${item.id}"
-                                placeholder="Add card note..."
-                                value="${escapeHtml(item.message || '')}"
-                                onkeydown="window.handleMessageKey(event, '${item.id}')"
-                                onblur="window.saveInlineMessage('${item.id}')"
-                                class="w-full text-[9px] font-normal text-slate-800 bg-white border border-blue-500 rounded px-1 py-0.5 shadow-xs focus:outline-none ring-1 ring-blue-100">
-                        </div>
-                    </div>
-
-                    <!-- Single Compact Row: Driver, Category, and Status -->
+                    ${messageBlock}
                     <div class="flex items-center gap-1 w-full pt-0.5 border-t border-black/10 overflow-hidden" onclick="event.stopPropagation()">
-                        <!-- Driver Pill Button -->
-                        <button type="button" title="Click to assign driver" onclick="window.openDriverPickerModal('${item.id}', event)" class="h-4 inline-flex items-center gap-0.5 px-1.5 rounded bg-white/90 hover:bg-white text-slate-900 font-bold transition whitespace-nowrap border border-black/15 shadow-2xs cursor-pointer text-[8.5px] shrink-0">
-                            <span class="w-1.5 h-1.5 rounded-full ${dColor.dot} shrink-0"></span>
-                            <span>${escapeHtml(item.driver || 'Driver')}</span>
-                        </button>
-
-                        <!-- Category Pill Button -->
-                        <button type="button" title="Click to change category" onclick="window.openCategoryPicker('${item.id}', event)" class="h-4 inline-flex items-center gap-0.5 px-1 rounded text-[8.5px] font-semibold border ${cat.bg} ${cat.text} ${cat.border} hover:opacity-85 transition whitespace-nowrap cursor-pointer flex-1 min-w-0">
-                            <i class="fa-solid ${cat.icon} text-[7px] shrink-0"></i>
-                            <span class="truncate">${cat.label}</span>
-                        </button>
-
-                        <!-- Status Pill Button -->
-                        <button type="button" title="Click to update status or postpone" onclick="window.openStatusModal('${item.id}', event)" class="h-4 inline-flex items-center gap-0.5 px-1 rounded text-[7.5px] font-semibold border ${stat.bg} ${stat.text} ${stat.border} hover:opacity-85 transition whitespace-nowrap cursor-pointer shrink-0">
-                            <span class="w-1.5 h-1.5 rounded-full ${stat.dot} shrink-0"></span>
-                            <span>${stat.label}</span>
-                        </button>
+                        ${driverBadge}
+                        ${categoryBadge}
+                        ${statusBadge}
                     </div>
                 </div>
             `;
@@ -1057,34 +1102,48 @@
             const titleClasses = isCancelled ? 'line-through text-slate-400 font-medium' : 'font-medium text-slate-800';
 
             const attachmentIcon = item.attachment
-                ? `<button type="button" title="Attachment: ${escapeHtml(item.attachment.name)} (Click to view)" onclick="window.showAttachmentModal('${item.id}', event)" class="w-4 h-4 rounded hover:bg-slate-200/60 flex items-center justify-center text-slate-500 hover:text-blue-600 shrink-0 text-[8px] transition cursor-pointer"><i class="fa-solid fa-paperclip"></i></button>`
+                ? `<button type="button" title="Attachment: ${escapeHtml(item.attachment.name)}" onclick="window.showAttachmentModal('${item.id}', event)" class="w-4 h-4 rounded hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-blue-600 shrink-0 text-[8px] transition cursor-pointer"><i class="fa-solid fa-paperclip"></i></button>`
                 : '';
 
             const dotIndicator = `
-                <button type="button" title="${hasDetails ? 'Click to view private details' : 'No details (Click to add)'}" onclick="window.showQuickDetailsModal('${item.id}', event)" class="p-0.5 rounded-full hover:ring-1 hover:ring-slate-300 flex items-center justify-center cursor-pointer transition">
+                <button type="button" title="${hasDetails ? 'Click to view details' : 'No details'}" onclick="window.showQuickDetailsModal('${item.id}', event)" class="p-0.5 rounded-full hover:ring-1 hover:ring-slate-300 flex items-center justify-center cursor-pointer transition">
                     <span class="w-1.5 h-1.5 rounded-full ${hasDetails ? 'bg-rose-500 ring-1 ring-white shadow-xs' : 'bg-emerald-500 ring-1 ring-white shadow-xs'}"></span>
                 </button>
             `;
 
+            const isEditable = state.isEditMode;
+
+            const titleSection = isEditable ? `
+                <div id="comp-title-disp-${item.id}" onclick="window.startInlineTitleEdit('${item.id}', event)" title="Click directly to edit title" class="cursor-text group/title rounded px-1 -mx-0.5 py-0.2 hover:bg-blue-100/50 flex items-center justify-between gap-1 transition">
+                    <span class="text-[10px] leading-tight break-words line-clamp-2 flex-1 ${titleClasses}">${escapeHtml(item.title)}</span>
+                    <i class="fa-solid fa-pen text-[7px] text-slate-300 group-hover/title:text-blue-500 opacity-0 group-hover/title:opacity-100 shrink-0 transition"></i>
+                </div>
+                <div id="comp-title-edit-box-${item.id}" class="hidden my-0.5">
+                    <input type="text" id="comp-title-input-${item.id}"
+                        value="${escapeHtml(item.title)}"
+                        onkeydown="window.handleTitleKey(event, '${item.id}')"
+                        onblur="window.saveInlineTitle('${item.id}')"
+                        class="w-full text-[10px] font-semibold text-slate-900 bg-white border border-blue-500 rounded px-1 py-0.5 shadow-xs focus:outline-none">
+                </div>
+            ` : `
+                <div class="px-1 py-0.2">
+                    <span class="text-[10px] leading-tight break-words line-clamp-2 ${titleClasses}">${escapeHtml(item.title)}</span>
+                </div>
+            `;
+
+            const deleteBtn = isEditable ? `
+                <button type="button" title="Delete task" onclick="window.showDeleteConfirmDialog('${item.id}', event)" class="opacity-0 group-hover:opacity-100 hover:text-rose-600 text-slate-400 transition text-[8px] p-0.5 cursor-pointer">
+                    <i class="fa-regular fa-trash-can"></i>
+                </button>
+            ` : '';
+
             return `
-                <div id="card-${item.id}" draggable="true" data-id="${item.id}" onclick="window.openViewModal('${item.id}')" class="group relative border rounded px-1.5 py-1 shadow-xs hover:shadow transition-all cursor-pointer flex items-center justify-between gap-1 select-none ${borderAndBg}">
+                <div id="card-${item.id}" draggable="${isEditable ? 'true' : 'false'}" data-id="${item.id}" onclick="window.openViewModal('${item.id}')" class="group relative border rounded px-1.5 py-1 shadow-xs hover:shadow transition-all cursor-pointer flex items-center justify-between gap-1 select-none ${borderAndBg}">
                     <div class="flex-1 min-w-0" onclick="event.stopPropagation()">
-                        <div id="comp-title-disp-${item.id}" onclick="window.startInlineTitleEdit('${item.id}', event)" title="Click directly to edit title" class="cursor-text group/title rounded px-1 -mx-0.5 py-0.2 hover:bg-blue-100/50 flex items-center justify-between gap-1 transition">
-                            <span class="text-[10px] leading-tight break-words line-clamp-2 flex-1 ${titleClasses}">${escapeHtml(item.title)}</span>
-                            <i class="fa-solid fa-pen text-[7px] text-slate-300 group-hover/title:text-blue-500 opacity-0 group-hover/title:opacity-100 shrink-0 transition"></i>
-                        </div>
-                        <div id="comp-title-edit-box-${item.id}" class="hidden my-0.5">
-                            <input type="text" id="comp-title-input-${item.id}"
-                                value="${escapeHtml(item.title)}"
-                                onkeydown="window.handleTitleKey(event, '${item.id}')"
-                                onblur="window.saveInlineTitle('${item.id}')"
-                                class="w-full text-[10px] font-semibold text-slate-900 bg-white border border-blue-500 rounded px-1 py-0.5 shadow-xs focus:outline-none">
-                        </div>
+                        ${titleSection}
                     </div>
                     <div class="flex items-center gap-0.5 shrink-0 ml-0.5" onclick="event.stopPropagation()">
-                        <button type="button" title="Delete task" onclick="window.showDeleteConfirmDialog('${item.id}', event)" class="opacity-0 group-hover:opacity-100 hover:text-rose-600 text-slate-400 transition text-[8px] p-0.5">
-                            <i class="fa-regular fa-trash-can"></i>
-                        </button>
+                        ${deleteBtn}
                         ${attachmentIcon}
                         ${dotIndicator}
                     </div>
@@ -1135,12 +1194,10 @@
                         </div>
                     `;
                 } else {
-                    // Render active tasks first (grouped by driver)
                     if (activeTasks.length > 0) {
                         tasksHtml += activeTasks.map(item => useCompactCards ? renderCompactNameCard(item) : renderDetailedCard(item)).join('');
                     }
 
-                    // Interactive toggle button for Delivered and Cancelled tasks
                     const totalDone = deliveredTasks.length + cancelledTasks.length;
                     if (totalDone > 0) {
                         const isExpanded = state.expandedDoneDates.has(isoDate);
@@ -1180,9 +1237,11 @@
                                 <span class="px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-slate-100 text-slate-600">
                                     ${dayTasks.length}
                                 </span>
-                                <button type="button" title="Add schedule for this date" onclick="window.openCreateModalForDate('${isoDate}')" class="w-5 h-5 rounded hover:bg-slate-100 text-slate-400 hover:text-blue-600 flex items-center justify-center transition">
+                                ${state.isEditMode ? `
+                                <button type="button" title="Add schedule for this date" onclick="window.openCreateModalForDate('${isoDate}')" class="w-5 h-5 rounded hover:bg-slate-100 text-slate-400 hover:text-blue-600 flex items-center justify-center transition cursor-pointer">
                                     <i class="fa-solid fa-plus text-[9px]"></i>
                                 </button>
+                                ` : ''}
                             </div>
                         </div>
 
@@ -1214,7 +1273,6 @@
                     <div class="flex-1 grid grid-cols-7 divide-x divide-y divide-slate-100">
             `;
 
-            // Previous month padding days
             for (let i = firstDayIndex - 1; i >= 0; i--) {
                 const dayNum = prevLastDate - i;
                 const d = new Date(year, month - 1, dayNum);
@@ -1226,7 +1284,6 @@
                 `;
             }
 
-            // Current month days
             for (let dayNum = 1; dayNum <= lastDate; dayNum++) {
                 const d = new Date(year, month, dayNum);
                 const iso = toISODate(d);
@@ -1277,7 +1334,6 @@
                 `;
             }
 
-            // Next month padding days to complete grid
             const totalCells = firstDayIndex + lastDate;
             const remaining = (7 - (totalCells % 7)) % 7;
             for (let i = 1; i <= remaining; i++) {
@@ -1302,9 +1358,9 @@
             document.querySelectorAll('#viewModeGroup .view-btn').forEach(btn => {
                 const isActive = btn.getAttribute('data-view') === state.viewMode;
                 if (isActive) {
-                    btn.className = 'view-btn px-2.5 py-1.5 rounded-lg transition bg-white text-blue-600 font-bold shadow-xs';
+                    btn.className = 'view-btn px-2 py-1.5 rounded-lg transition bg-white text-blue-600 font-bold shadow-xs cursor-pointer';
                 } else {
-                    btn.className = 'view-btn px-2.5 py-1.5 rounded-lg transition hover:text-slate-900';
+                    btn.className = 'view-btn px-2 py-1.5 rounded-lg transition hover:text-slate-900 cursor-pointer';
                 }
             });
 
@@ -1415,7 +1471,80 @@
             }
         }
 
+        function updateEditModeUI() {
+            const btn = document.getElementById('btnToggleEditMode');
+            if (btn) {
+                if (state.isEditMode) {
+                    btn.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-bold transition shadow-xs cursor-pointer';
+                    btn.innerHTML = `<i class="fa-solid fa-lock-open text-emerald-600"></i><span>Edit: ON</span>`;
+                } else {
+                    btn.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-bold transition shadow-xs cursor-pointer';
+                    btn.innerHTML = `<i class="fa-solid fa-lock text-rose-500"></i><span>Edit: OFF</span>`;
+                }
+            }
+
+            const btnOpenCreate = document.getElementById('btnOpenCreate');
+            if (btnOpenCreate) {
+                if (state.isEditMode) {
+                    btnOpenCreate.classList.remove('hidden');
+                    btnOpenCreate.classList.add('inline-flex');
+                } else {
+                    btnOpenCreate.classList.remove('inline-flex');
+                    btnOpenCreate.classList.add('hidden');
+                }
+            }
+
+            const addDriverBtn = document.getElementById('btnAddDriverHeader');
+            if (addDriverBtn) {
+                if (state.isEditMode) { addDriverBtn.classList.remove('hidden'); addDriverBtn.classList.add('flex'); }
+                else { addDriverBtn.classList.remove('flex'); addDriverBtn.classList.add('hidden'); }
+            }
+
+            const addCategoryBtn = document.getElementById('btnAddCategoryHeader');
+            if (addCategoryBtn) {
+                if (state.isEditMode) { addCategoryBtn.classList.remove('hidden'); addCategoryBtn.classList.add('flex'); }
+                else { addCategoryBtn.classList.remove('flex'); addCategoryBtn.classList.add('hidden'); }
+            }
+
+            const addStatusBtn = document.getElementById('btnAddStatusHeader');
+            if (addStatusBtn) {
+                if (state.isEditMode) { addStatusBtn.classList.remove('hidden'); addStatusBtn.classList.add('flex'); }
+                else { addStatusBtn.classList.remove('flex'); addStatusBtn.classList.add('hidden'); }
+            }
+        }
+        window.updateEditModeUI = updateEditModeUI;
+
+        window.handleEditToggleClick = function() {
+            if (state.isEditMode) {
+                state.isEditMode = false;
+                state.viewMode = 'FOUR_DAY';
+                updateEditModeUI();
+                renderCalendar();
+                showStatusPopper('Editing Locked (4-Day View)', 'CANCELLED');
+            } else {
+                openPasswordModal();
+            }
+        };
+
+        window.openPasswordModal = function() {
+            const modal = document.getElementById('passwordModal');
+            const input = document.getElementById('adminPasswordInput');
+            const err = document.getElementById('passwordErrorMsg');
+            if (modal && input) {
+                input.value = '';
+                if (err) err.classList.add('hidden');
+                modal.classList.remove('hidden');
+                setTimeout(() => input.focus(), 60);
+            }
+        };
+
+        window.closePasswordModal = function() {
+            const modal = document.getElementById('passwordModal');
+            if (modal) modal.classList.add('hidden');
+        };
+
         window.startInlineTitleEdit = function(id, e) {
+            if (!state.isEditMode) return;
             if (e) e.stopPropagation();
             const disp = document.getElementById(`title-disp-${id}`);
             const box = document.getElementById(`title-edit-box-${id}`);
@@ -1442,6 +1571,7 @@
         };
 
         window.saveInlineTitle = function(id) {
+            if (!state.isEditMode) return;
             const card = document.getElementById(`card-${id}`);
             if (card) card.setAttribute('draggable', 'true');
 
@@ -1472,6 +1602,7 @@
         };
 
         window.startInlineMessageEdit = function(id, e) {
+            if (!state.isEditMode) return;
             if (e) e.stopPropagation();
             const disp = document.getElementById(`msg-disp-${id}`);
             const box = document.getElementById(`msg-edit-box-${id}`);
@@ -1488,6 +1619,7 @@
         };
 
         window.saveInlineMessage = function(id) {
+            if (!state.isEditMode) return;
             const card = document.getElementById(`card-${id}`);
             if (card) card.setAttribute('draggable', 'true');
 
@@ -1559,7 +1691,6 @@
             const delivery = state.deliveries.find(d => d.id === deliveryId);
             if (!delivery) return;
 
-            // Auto-expand the date container so user can view the newly moved task
             state.expandedDoneDates.add(delivery.date);
             db.collection("deliveries").doc(deliveryId).update({ status: newStatus });
 
@@ -1682,21 +1813,20 @@
         };
 
         window.openDriverPickerModal = function(id, e) {
+            if (!state.isEditMode) return;
             if (e) { e.stopPropagation(); e.preventDefault(); }
             const delivery = state.deliveries.find(d => d.id === id);
             if (!delivery) return;
 
             state.activeActionId = id;
-            state.selectedDriverRadio = delivery.driver || DRIVERS_LIST[0];
-
             document.getElementById('driverPickerTaskTitle').textContent = delivery.title;
             const container = document.getElementById('driverRadioList');
 
             container.innerHTML = DRIVERS_LIST.map(driver => {
-                const isSelected = driver === state.selectedDriverRadio;
+                const isCurrent = driver === delivery.driver;
                 const dColor = getDriverColor(driver);
                 return `
-                    <label class="flex items-center justify-between p-2 rounded-xl border ${isSelected ? 'border-blue-500 bg-blue-50/60 ring-1 ring-blue-300' : 'border-slate-200 hover:bg-slate-50'} cursor-pointer transition">
+                    <button type="button" onclick="window.applyDriverSelection('${escapeHtml(driver)}')" class="w-full flex items-center justify-between p-2 rounded-xl border ${isCurrent ? 'border-blue-500 bg-blue-50/70 ring-1 ring-blue-300' : 'border-slate-200 hover:bg-slate-50'} transition text-left cursor-pointer">
                         <div class="flex items-center gap-2.5">
                             <div class="w-7 h-7 rounded-lg ${dColor.bg} border border-slate-300 text-slate-800 flex items-center justify-center text-xs font-bold shadow-xs">
                                 <span class="w-2 h-2 rounded-full ${dColor.dot} mr-1"></span>
@@ -1704,24 +1834,21 @@
                             </div>
                             <span class="text-xs font-semibold text-slate-800">${escapeHtml(driver)}</span>
                         </div>
-                        <input type="radio" name="driverRadioChoice" value="${escapeHtml(driver)}" ${isSelected ? 'checked' : ''} onchange="window.selectDriverRadio('${escapeHtml(driver)}')" class="text-blue-600 focus:ring-blue-500">
-                    </label>
+                        ${isCurrent ? '<i class="fa-solid fa-circle-check text-blue-600 text-sm"></i>' : ''}
+                    </button>
                 `;
             }).join('');
 
             document.getElementById('driverPickerModal').classList.remove('hidden');
         };
 
-        window.selectDriverRadio = function(driverName) {
-            state.selectedDriverRadio = driverName;
-            document.querySelectorAll('#driverRadioList label').forEach(lbl => {
-                const radio = lbl.querySelector('input[type="radio"]');
-                if (radio && radio.checked) {
-                    lbl.className = 'flex items-center justify-between p-2 rounded-xl border border-blue-500 bg-blue-50/60 cursor-pointer transition';
-                } else {
-                    lbl.className = 'flex items-center justify-between p-2 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition';
-                }
-            });
+        window.applyDriverSelection = function(driverName) {
+            const delivery = state.deliveries.find(d => d.id === state.activeActionId);
+            if (!delivery) return;
+
+            db.collection("deliveries").doc(delivery.id).update({ driver: driverName });
+            closeDriverPickerModal();
+            showDriverPopper(`Driver: ${driverName}`);
         };
 
         window.closeDriverPickerModal = function() {
@@ -1729,6 +1856,7 @@
         };
 
         window.openCategoryPicker = function(id, e) {
+            if (!state.isEditMode) return;
             if (e) { e.stopPropagation(); e.preventDefault(); }
             const delivery = state.deliveries.find(d => d.id === id);
             if (!delivery) return;
@@ -1770,6 +1898,7 @@
         };
 
         window.openStatusModal = function(id, e) {
+            if (!state.isEditMode) return;
             if (e) { e.stopPropagation(); e.preventDefault(); }
             const delivery = state.deliveries.find(d => d.id === id);
             if (!delivery) return;
@@ -1783,7 +1912,7 @@
                     const s = statusMap[key];
                     const isCurrent = delivery.status === key;
                     return `
-                        <button type="button" onclick="window.applyStatusSelection('${key}')" class="w-full flex items-center justify-between p-2 rounded-xl border ${isCurrent ? 'border-blue-500 ring-2 ring-blue-200' : s.border} ${s.bg} hover:opacity-85 transition text-left text-xs font-semibold ${s.text}">
+                        <button type="button" onclick="window.applyStatusSelection('${key}')" class="w-full flex items-center justify-between p-2 rounded-xl border ${isCurrent ? 'border-blue-500 ring-2 ring-blue-200' : s.border} ${s.bg} hover:opacity-85 transition text-left text-xs font-semibold ${s.text} cursor-pointer">
                             <div class="flex items-center gap-2">
                                 <span class="w-2.5 h-2.5 rounded-full ${s.dot}"></span>
                                 <span>${s.label}</span>
@@ -1864,7 +1993,7 @@
             if (hasDetails) {
                 content.textContent = delivery.details;
             } else {
-                content.innerHTML = '<span class="italic text-slate-400">No private specifications recorded. Click below to add gate pass codes, contact numbers, or delivery instructions.</span>';
+                content.innerHTML = '<span class="italic text-slate-400">No specifications recorded.</span>';
             }
 
             document.getElementById('btnEditFromQuickDetails').onclick = () => {
@@ -1922,7 +2051,7 @@
 
             state.activeViewingId = id;
             document.getElementById('viewTitle').textContent = delivery.title;
-            document.getElementById('viewMessage').textContent = delivery.message || 'No additional card note';
+            document.getElementById('viewMessage').textContent = delivery.message || 'No additional note';
             document.getElementById('viewDate').textContent = formatFullDate(new Date(delivery.date + 'T00:00:00'));
             document.getElementById('viewDriver').textContent = delivery.driver || 'Unassigned';
 
@@ -1962,6 +2091,7 @@
         };
 
         window.openEditModal = function(id, e) {
+            if (!state.isEditMode) return;
             if (e) { e.stopPropagation(); e.preventDefault(); }
             const delivery = state.deliveries.find(d => d.id === id);
             if (!delivery) return;
@@ -1998,6 +2128,7 @@
         };
 
         window.openCreateModalForDate = function(isoDate) {
+            if (!state.isEditMode) return;
             document.getElementById('createTitle').value = '';
             document.getElementById('createDate').value = isoDate || toISODate(state.currentDate);
             document.getElementById('createDriver').value = '';
@@ -2030,7 +2161,7 @@
                 <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 text-xs font-medium max-w-full">
                     <i class="fa-solid fa-file text-blue-600"></i>
                     <span class="truncate">${escapeHtml(fileObj.name)}</span>
-                    <button type="button" onclick="window.removeAttachment('${mode}')" class="text-rose-500 hover:text-rose-700 ml-1 font-bold">×</button>
+                    <button type="button" onclick="window.removeAttachment('${mode}')" class="text-rose-500 hover:text-rose-700 ml-1 font-bold cursor-pointer">×</button>
                 </div>
             `;
         }
@@ -2042,6 +2173,7 @@
         };
 
         window.showDeleteConfirmDialog = function(id, e) {
+            if (!state.isEditMode) return;
             if (e) { e.stopPropagation(); e.preventDefault(); }
             state.itemPendingDelete = id;
 
@@ -2092,6 +2224,59 @@
             renderCalendar();
         }
 
+        const ZOOM_VIEW_ORDER = ['DAY', 'THREE_DAY', 'FOUR_DAY', 'WEEK', 'MONTH'];
+        const ZOOM_LABELS = {
+            'DAY': '1-Day View',
+            'THREE_DAY': '3-Day View',
+            'FOUR_DAY': '4-Day View',
+            'WEEK': 'Week View (7 Days)',
+            'MONTH': 'Month View'
+        };
+
+        window.zoomStep = function(direction) {
+            const currentIndex = ZOOM_VIEW_ORDER.indexOf(state.viewMode);
+            const nextIndex = Math.max(0, Math.min(ZOOM_VIEW_ORDER.length - 1, (currentIndex === -1 ? 2 : currentIndex) + direction));
+
+            if (nextIndex !== currentIndex) {
+                state.viewMode = ZOOM_VIEW_ORDER[nextIndex];
+                renderCalendar();
+                showStatusPopper(ZOOM_LABELS[state.viewMode], 'TO_DO');
+            }
+        };
+
+        function initMouseZoom() {
+            const container = document.getElementById('calendarContainer');
+            if (!container) return;
+
+            let lastZoomTime = 0;
+
+            window.addEventListener('wheel', (e) => {
+                if (!e.ctrlKey && !e.metaKey) return;
+
+                const rect = container.getBoundingClientRect();
+                const inCalendarArea = (
+                    e.clientX >= rect.left - 40 &&
+                    e.clientX <= rect.right + 40 &&
+                    e.clientY >= rect.top - 60 &&
+                    e.clientY <= rect.bottom + 40
+                );
+
+                if (!inCalendarArea) return;
+
+                e.preventDefault();
+
+                const now = Date.now();
+                if (now - lastZoomTime < 240) return;
+                lastZoomTime = now;
+
+                if (e.deltaY > 0) {
+                    window.zoomStep(1);
+                } else if (e.deltaY < 0) {
+                    window.zoomStep(-1);
+                }
+            }, { passive: false });
+        }
+
         function initSwipeGestures() {
             const container = document.getElementById('calendarContainer');
             if (!container) return;
@@ -2128,6 +2313,10 @@
 
             cards.forEach(card => {
                 card.addEventListener('dragstart', (e) => {
+                    if (!state.isEditMode) {
+                        e.preventDefault();
+                        return;
+                    }
                     e.dataTransfer.setData('text/plain', card.getAttribute('data-id'));
                     e.dataTransfer.effectAllowed = 'move';
                     setTimeout(() => card.classList.add('opacity-40'), 0);
@@ -2140,6 +2329,7 @@
 
             dropCells.forEach(cell => {
                 cell.addEventListener('dragover', (e) => {
+                    if (!state.isEditMode) return;
                     e.preventDefault();
                     e.dataTransfer.dropEffect = 'move';
                     cell.classList.add('drag-over-cell');
@@ -2150,6 +2340,7 @@
                 });
 
                 cell.addEventListener('drop', (e) => {
+                    if (!state.isEditMode) return;
                     e.preventDefault();
                     cell.classList.remove('drag-over-cell');
                     const deliveryId = e.dataTransfer.getData('text/plain');
@@ -2165,6 +2356,22 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             initCloudSync();
+            updateEditModeUI();
+
+            document.getElementById('passwordForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const pwd = document.getElementById('adminPasswordInput').value;
+                if (pwd === '2255') {
+                    state.isEditMode = true;
+                    closePasswordModal();
+                    updateEditModeUI();
+                    renderCalendar();
+                    showStatusPopper('Editing Unlocked', 'DELIVERED');
+                } else {
+                    document.getElementById('passwordErrorMsg').classList.remove('hidden');
+                    document.getElementById('adminPasswordInput').select();
+                }
+            });
 
             document.getElementById('addDriverForm').addEventListener('submit', (e) => {
                 e.preventDefault();
@@ -2349,6 +2556,7 @@
                 }
             });
 
+            initMouseZoom();
             initSwipeGestures();
         });
     </script>
